@@ -1,0 +1,11 @@
+[Unit]
+Description=Set Static IP via ip command
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/radxa/set-static-ip.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
