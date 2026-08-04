@@ -1,0 +1,30 @@
+name: Requirement tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  requirements:
+    name: Verify the requirement register against the artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        # No LFS: the only two LFS objects are the full-assembly and
+        # subassembly-100 STEP files, and nothing here reads STEP geometry.
+        # The tests read part names, the manifest, the harness, the device
+        # tree overlay and the MJCF, all of which are plain git objects.
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: python3 -m pip install --disable-pip-version-check pytest==9.1.1 pyyaml==6.0.3
+
+      - name: Run requirement tests
+        run: python3 -m pytest tests/requirements -v
