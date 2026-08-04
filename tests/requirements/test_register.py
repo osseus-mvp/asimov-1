@@ -124,6 +124,47 @@ def test_every_allocation_names_a_declared_subsystem_or_function(
     assert not dangling, f"functions allocated to nothing declared: {dangling}"
 
 
+def test_every_constrains_entry_names_something_this_repository_has(
+    register: dict[str, Any], architecture: dict[str, Any]
+) -> None:
+    """`constrains` resolves against a real file or a declared subsystem.
+
+    The field says which rolled-up number a limit is compared against, written
+    `<subject>@<property>:<aggregation>`. Its whole value is that the subject
+    is a thing this repository publishes, so a subject naming a file that does
+    not exist, or a subsystem the architecture never declares, would read
+    downstream as a requirement with no number rather than as a typo here —
+    and the fix would be in a different repository from the symptom. Same rule
+    as `test_every_allocation_names_a_declared_subsystem_or_function`: this
+    repository fails first, on a diff.
+    """
+    subsystems = {subsystem["id"] for subsystem in architecture["subsystems"]}
+    functions = {function["id"] for function in architecture["functions"]}
+    safety = {function["id"] for function in architecture["safety_functions"]}
+    declared = {architecture["system"]["id"]} | subsystems | functions | safety
+
+    for entry in register["requirements"]:
+        stated = entry.get("constrains")
+        if stated is None:
+            continue
+        identifier = entry["id"]
+        subject, separator, budget = str(stated).rpartition("@")
+        assert separator and subject, (
+            f"{identifier} states constrains {stated!r};"
+            " the shape is subject@property:aggregation"
+        )
+        prop, separator, aggregation = budget.partition(":")
+        assert separator and prop and aggregation, (
+            f"{identifier} states budget {budget!r}, which is not property:aggregation"
+        )
+        if subject in declared:
+            continue
+        assert (REPO_ROOT / subject).is_file(), (
+            f"{identifier} constrains {subject!r}, which is neither a subsystem"
+            " system-architecture.yaml declares nor a file in this repository"
+        )
+
+
 def test_every_in_repo_verifying_test_exists(register: dict[str, Any]) -> None:
     """`verifies` points at real test functions in this repository.
 
