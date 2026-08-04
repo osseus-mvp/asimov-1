@@ -1,0 +1,931 @@
+# Requirement register — Asimov v1
+#
+# Four levels: L0 stakeholder, L1 system, L2 subsystem, L3 component. Each
+# entry states one number, the unit it is carried in, how it is compared, and
+# where the actual value lives.
+#
+# Two rules govern this file, and they are different rules.
+#
+# 1. **Numbers are cited, never invented.** Every `limit` below is read from an
+#    artifact — this repository, asimovinc/asimov-mjlab, or a vendor document
+#    under docs/datasheets/ — and `basis` names the artifact and what it says.
+#    A number that could not be sourced is not written down here at all.
+#
+# 2. **Structure is authored, and says so.** The `parent` links form a
+#    decomposition this register asserts. The project does not publish one, and
+#    this file does not pretend it does. Same for `allocated_to`, which points
+#    into tests/requirements/system-architecture.yaml. Read a `parent` edge as
+#    "this register claims the derivation", not "the project stated it".
+#
+# Units are carried verbatim and never converted. A limit in kg·mm² stays in
+# kg·mm² and the comparison happens where the unit is understood.
+#
+# Fields:
+#   id, statement, limit, unit, measured_source, basis   — required
+#   level        L0 | L1 | L2 | L3
+#   comparator   at_most | at_least | equals | between
+#   parent       the requirement this one decomposes, when there is one
+#   allocated_to subsystem and function ids from system-architecture.yaml
+#   verifies     test node ids; repo-qualified when the test is not in this repo
+#   measures     machine-readable pointer to where the actual value lives
+#
+# An entry with no `verifies` has no automated verification anywhere, and that
+# is recorded rather than papered over. Seven entries are in that state and
+# each says why in its basis.
+
+requirements:
+
+  # =========================================================================
+  # L0 — stakeholder requirements.
+  #
+  # Restated in the Osseus customer-spec document. Every number is read from
+  # this repository's own README.md; the document supplies the narrative, not
+  # the values.
+  # =========================================================================
+
+  - id: REQ-L0-MASS
+    level: L0
+    statement: >-
+      The total mass of the robot must not exceed 35 kg.
+    limit: 35.0
+    unit: kg
+    comparator: at_most
+    allocated_to: [SYS-ASV1]
+    measures: 'sim-model/xmls/asimov.xml#sum(/mujoco//body/inertial/@mass)'
+    measured_source: >-
+      sim-model/xmls/asimov.xml: sum over every body/inertial/@mass element.
+      28 bodies, every one declares a mass; measured total 32.37127688334273 kg.
+    basis: >-
+      README.md Specifications table states "Weight | 35 kg". The measured
+      total is the simulation model's link mass and excludes anything the MJCF
+      does not model — wiring harness, battery, and the off-the-shelf fasteners
+      in the fabrication manifest — so the 2.6 kg of headroom is not slack, it
+      is unmodelled mass.
+    verifies:
+      - 'tests/requirements/test_sim_model.py::test_total_link_mass_is_within_the_l0_budget'
+
+  - id: REQ-L0-HEIGHT
+    level: L0
+    statement: >-
+      The standing height of the robot must not exceed 1.2 m, which bounds its
+      shipping and workspace envelope.
+    limit: 1.2
+    unit: m
+    comparator: at_most
+    allocated_to: [SYS-ASV1]
+    measured_source: >-
+      No artifact in this repository states a measured standing height.
+    basis: >-
+      README.md Specifications table states "Height | 1.2 m". There is no
+      machine-readable actual: standing height is a function of a stance the
+      model does not fix, and deriving one from the MJCF would mean choosing a
+      pose and calling the result a measurement. No `measures` pointer and no
+      test, deliberately.
+
+  - id: REQ-L0-DOF
+    level: L0
+    statement: >-
+      The robot must provide at least 25 actuated degrees of freedom, each one
+      a powered rotation about a single axis.
+    limit: 25
+    unit: actuated joints
+    comparator: at_least
+    allocated_to: [SYS-ASV1, FN-LOCOMOTION, FN-MANIPULATION]
+    measures: 'sim-model/xmls/asimov.xml#count(/mujoco//joint[@name][not(contains(@name,"toe"))])'
+    measured_source: >-
+      sim-model/xmls/asimov.xml: 27 named hinge joints, of which the two toe
+      joints are passive, leaving 25 actuated.
+    basis: >-
+      README.md Specifications table states "Degrees of Freedom | 25 actuated
+      + 2 passive" and "Legs | 6 DOF x 2 + toe x 2". sim-model/README.md
+      independently states "25 actuated joints". The two agree.
+    verifies:
+      - 'tests/requirements/test_sim_model.py::test_model_declares_25_actuated_and_2_passive_joints'
+
+  - id: REQ-L0-KIT-COST
+    level: L0
+    statement: >-
+      The DIY kit must reach customers at a cost no higher than 15000 USD.
+    limit: 15000
+    unit: USD
+    comparator: at_most
+    allocated_to: [SYS-ASV1]
+    measured_source: >-
+      No artifact in this repository states a costed bill of materials.
+    basis: >-
+      README.md DIY Kit callout states "$499 deposit to reserve. $15,000 target
+      price. Ships summer 2026." The fabrication manifest enumerates parts and
+      carries no prices, and the procurement BOM lives off-repo at
+      manual.asimov.inc/v1/bom, so no actual exists to compare against. No
+      test.
+
+  - id: REQ-L0-PAYLOAD-CURL
+    level: L0
+    statement: >-
+      Each arm must lift a payload of at least 15 kg in a bicep curl.
+    limit: 15
+    unit: kg
+    comparator: at_least
+    allocated_to: [SYS-ASV1, FN-MANIPULATION]
+    measured_source: >-
+      No artifact in this repository states a measured or simulated arm
+      payload.
+    basis: >-
+      README.md Activity/Load table states "Bicep curl | 15 kg each arm". The
+      arm joints carry no effort limits anywhere — asimov-mjlab models the
+      12-DOF locomotion subset only — so there is nothing to compare this
+      against. No test. This is the clearest coverage hole in the register.
+
+  - id: REQ-L0-SELF-SOURCE
+    level: L0
+    statement: >-
+      A self-source builder must be able to fabricate the robot from a
+      repo-local machine-readable inventory covering at least 170 parts.
+    limit: 170
+    unit: manifest entries
+    comparator: at_least
+    allocated_to: [SYS-ASV1]
+    measures: 'mechanical/FABRICATION_MANIFEST.json#/entry_count'
+    measured_source: >-
+      mechanical/FABRICATION_MANIFEST.json field `entry_count` (measured value
+      170), each entry carrying subassembly, fabrication_class, part_id and a
+      repo-relative STEP path.
+    basis: >-
+      Value stated by the manifest the repository generates from its own CAD
+      tree; the requirement pins it so that a part disappearing from the CAD
+      tree is a failure rather than a quieter manifest. README.md states
+      "Start with the repo-local fabrication manifest for the CAD-derived part
+      inventory".
+    verifies:
+      - 'tests/requirements/test_fabrication_manifest.py::test_manifest_enumerates_every_fabricated_part'
+
+  # =========================================================================
+  # L1 — system requirements.
+  #
+  # Restated in the Osseus PDR document.
+  # =========================================================================
+
+  - id: REQ-L1-ACTUATED-JOINTS
+    level: L1
+    parent: REQ-L0-DOF
+    statement: >-
+      The simulation model must declare exactly 25 actuated joints, one
+      powered rotation each.
+    limit: 25
+    unit: actuated joints
+    comparator: equals
+    allocated_to: [SYS-ASV1, FN-LOCOMOTION, FN-MANIPULATION, FN-JOINT-POSITION-CONTROL]
+    measures: 'sim-model/xmls/asimov.xml#count(/mujoco//joint[@name][not(contains(@name,"toe"))])'
+    measured_source: >-
+      sim-model/xmls/asimov.xml: 12 leg joints (6 per leg), 10 arm joints
+      (5 per arm), 1 waist yaw, 2 neck joints.
+    basis: >-
+      sim-model/README.md states "25 actuated joints"; README.md's breakdown
+      by region sums to the same 25. Stated as `equals` rather than `at_least`
+      because the model is the reference for the harness and the bus map, and
+      a 26th joint appearing there without a connector is the failure this
+      requirement exists to catch.
+    verifies:
+      - 'tests/requirements/test_sim_model.py::test_model_declares_25_actuated_and_2_passive_joints'
+
+  - id: REQ-L1-PASSIVE-TOE-JOINTS
+    level: L1
+    parent: REQ-L0-DOF
+    statement: >-
+      The simulation model must declare exactly 2 passive toe joints, which
+      take no torque command and must not appear in the wiring harness.
+    limit: 2
+    unit: passive joints
+    comparator: equals
+    allocated_to: [SYS-ASV1, FN-LOCOMOTION]
+    measures: 'sim-model/xmls/asimov.xml#count(/mujoco//joint[contains(@name,"toe")])'
+    measured_source: >-
+      sim-model/xmls/asimov.xml: joints `left_toe_joint` and `right_toe_joint`.
+    basis: >-
+      README.md states "25 actuated + 2 passive" and "Legs | 6 DOF x 2 + toe
+      x 2". The wiring harness carries no toe connector, which is the
+      cross-check that they are passive rather than merely unlisted.
+    verifies:
+      - 'tests/requirements/test_sim_model.py::test_model_declares_25_actuated_and_2_passive_joints'
+
+  - id: REQ-L1-LINK-INERTIALS
+    level: L1
+    parent: REQ-L0-MASS
+    statement: >-
+      Every one of the 28 link bodies in the simulation model must declare an
+      inertial mass, so that the mass total is a sum over the whole robot
+      rather than over the subset that happens to be annotated.
+    limit: 28
+    unit: bodies declaring a mass
+    comparator: equals
+    allocated_to: [SYS-ASV1]
+    measures: 'sim-model/xmls/asimov.xml#count(/mujoco//body/inertial[@mass])'
+    measured_source: >-
+      sim-model/xmls/asimov.xml: 28 body elements, 28 inertial elements
+      carrying a @mass attribute.
+    basis: >-
+      sim-model/README.md states "28 link meshes"; the model declares 28 mesh
+      assets and 28 bodies. This requirement is the precondition for
+      REQ-L0-MASS being a whole-robot number, and it is stated separately
+      because a link losing its inertial block would silently lower the mass
+      total instead of failing.
+    verifies:
+      - 'tests/requirements/test_sim_model.py::test_every_link_declares_a_mass'
+
+  - id: REQ-L1-SUBASSEMBLY-COUNT
+    level: L1
+    parent: REQ-L0-SELF-SOURCE
+    statement: >-
+      The mechanical CAD tree must be organised into exactly 7 subassemblies.
+    limit: 7
+    unit: subassemblies
+    comparator: equals
+    allocated_to:
+      - SUB-MECH-100
+      - SUB-MECH-200
+      - SUB-MECH-300
+      - SUB-MECH-400
+      - SUB-MECH-500
+      - SUB-MECH-600
+      - SUB-MECH-700
+    measures: 'mechanical/FABRICATION_MANIFEST.json#/subassemblies'
+    measured_source: >-
+      mechanical/FABRICATION_MANIFEST.json field `subassemblies` (measured
+      value ["100","200","300","400","500","600","700"]).
+    basis: >-
+      mechanical/README.md states "CAD for all 7 Asimov v1 subassemblies" and
+      README.md's roadmap states "Mechanical CAD — 7 subassemblies".
+      mechanical/naming_convention.png names nine subassembly codes, adding
+      Right Hand 350 and Left Hand 450, and neither has a CAD directory —
+      recorded in system-architecture.yaml under
+      declared_absent_subassemblies rather than folded into this count.
+    verifies:
+      - 'tests/requirements/test_fabrication_manifest.py::test_manifest_declares_the_seven_cad_subassemblies'
+
+  - id: REQ-L1-FABRICATION-CLASSES
+    level: L1
+    parent: REQ-L0-SELF-SOURCE
+    statement: >-
+      Every part in the fabrication manifest must belong to one of at most 4
+      declared fabrication classes, so that a self-source builder needs no
+      process the project has not documented.
+    limit: 4
+    unit: fabrication classes
+    comparator: at_most
+    allocated_to: [SYS-ASV1]
+    measures: 'mechanical/FABRICATION_MANIFEST.json#/fabrication_classes'
+    measured_source: >-
+      mechanical/FABRICATION_MANIFEST.json field `fabrication_classes`
+      (measured value ["ALU_7075","SML_316L","MJF_PA12","OFF_THE_SHELF"]);
+      entries split 39 / 20 / 44 / 67 across the four.
+    basis: >-
+      Values stated by the manifest, and independently by
+      mechanical/naming_convention.png's MANUFACTURING METHODS table, which
+      maps part-id suffix A to CNC aluminium 7075, B to SLM 316L stainless, C
+      to MJF PA12 nylon, and X to off-the-shelf. README.md states "Structural
+      Materials | 7075 aluminium, MJF PA12 nylon", naming two of the three
+      in-house processes.
+    verifies:
+      - 'tests/requirements/test_fabrication_manifest.py::test_every_part_uses_a_declared_fabrication_class'
+
+  - id: REQ-L1-MANIFEST-REPRODUCIBLE
+    level: L1
+    parent: REQ-L0-SELF-SOURCE
+    statement: >-
+      Regenerating the fabrication manifest from the CAD tree must reproduce
+      all 170 committed entries, so the inventory cannot drift from the STEP
+      files it describes.
+    limit: 170
+    unit: entries reproduced from the CAD tree
+    comparator: equals
+    allocated_to: [SYS-ASV1, SUB-SW-CONTROL]
+    measures: 'mechanical/FABRICATION_MANIFEST.json#/entries'
+    measured_source: >-
+      scripts/generate_fabrication_manifest.py --check, which rebuilds the
+      manifest by walking mechanical/ASV1/*/FABRICATION/*/*.STEP and compares
+      it against the committed CSV and JSON.
+    basis: >-
+      The generator and its --check mode are the project's own, predating this
+      register, and README.md documents the command. The number is the same
+      170 the manifest states.
+    verifies:
+      - 'tests/requirements/test_fabrication_manifest.py::test_manifest_regenerates_from_the_cad_tree'
+
+  - id: REQ-L1-CAN-DOMAINS
+    level: L1
+    parent: REQ-L0-DOF
+    statement: >-
+      The Motion Control Board must present exactly 6 CAN bus domains, one per
+      declared limb or subsystem group.
+    limit: 6
+    unit: CAN bus domains
+    comparator: equals
+    allocated_to:
+      - SUB-ELEC-MCB
+      - SUB-BUS-C0
+      - SUB-BUS-C1
+      - SUB-BUS-C2
+      - SUB-BUS-C3
+      - SUB-BUS-C4
+      - SUB-BUS-C5
+      - FN-JOINT-POSITION-CONTROL
+    measures: 'electrical/motion_control/mcb-io.dts#count(can nodes with status "okay")'
+    measured_source: >-
+      electrical/motion_control/mcb-io.dts: six CAN nodes enabled — can0, can1
+      and can2 as fragment targets, can3, can4 and can5 as mcp2518fd children
+      of spi0 — every one with status "okay".
+    basis: >-
+      electrical/README.md's Port Mapping table declares six ports: C0 left leg
+      bus, C1 right leg bus, C2 right arm bus, C3 left arm bus, C4 waist-neck
+      bus, C5 BMS bus. Its Communication Ports table splits them 3 native and
+      3 SPI-CAN, which is exactly what the device tree overlay enables.
+      README.md states "CAN Bus | 5 @ 1Mbps + 1 @ 500kbps", also six.
+    verifies:
+      - 'tests/requirements/test_bus_domains.py::test_device_tree_enables_six_can_interfaces'
+
+  - id: REQ-L1-CAN-BITRATE
+    level: L1
+    parent: REQ-L1-CAN-DOMAINS
+    statement: >-
+      The five actuator CAN buses must run at 1000000 bit/s.
+    limit: 1000000
+    unit: bit/s
+    comparator: equals
+    allocated_to:
+      - SUB-BUS-C0
+      - SUB-BUS-C1
+      - SUB-BUS-C2
+      - SUB-BUS-C3
+      - SUB-BUS-C4
+      - FN-JOINT-POSITION-CONTROL
+    measured_source: >-
+      No artifact in either repository configures a CAN bitrate.
+    basis: >-
+      README.md Specifications table states "CAN Bus | 5 @ 1Mbps + 1 @
+      500kbps", which is where both numbers come from. The device tree overlay
+      sets clock rates — 200 MHz on the native controllers, a 40 MHz crystal
+      for the MCP2518FDs — but no bitrate; that is set at runtime by the link
+      configuration, which is part of the onboard software README.md's roadmap
+      still marks as planned. Stated so the graph shows the gap. No test.
+
+  - id: REQ-L1-TORQUE-LIMITED
+    level: L1
+    parent: REQ-L0-MASS
+    statement: >-
+      Every actuated joint modelled for locomotion must carry a finite effort
+      limit, so that no commanded torque can exceed what its motor is rated
+      to deliver.
+    limit: 12
+    unit: joints carrying a finite effort limit
+    comparator: equals
+    allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, SUB-SW-CONTROL]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#ASIMOV_ARTICULATION.actuators'
+    measured_source: >-
+      asimov-mjlab, src/mjlab/asset_zoo/robots/asimov/asimov_constants.py:
+      five BuiltinPositionActuatorCfg entries whose joint_names_expr patterns
+      cover all 12 joints of the locomotion model, each setting effort_limit.
+    basis: >-
+      asimov_constants.py heads the block "# Effort limits (peak torque from
+      datasheets)". 12 is the actuated joint count of the locomotion model
+      asimov-mjlab ships, not of this repository's 25 — the difference is real
+      and is recorded under SFN-TORQUE-LIMIT in system-architecture.yaml.
+      Satisfied on the position-control path only; see REQ-L2-CONTROL-CHANNELS
+      for the second, unlimited path the compiled model also exposes.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_every_locomotion_joint_carries_a_finite_effort_limit'
+
+  # =========================================================================
+  # L2 — subsystem requirements.
+  #
+  # The five effort limits are one requirement per motor type rather than one
+  # rolled-up requirement, because they are five different numbers from five
+  # different parts and a single limit would have to be the smallest of them.
+  # =========================================================================
+
+  - id: REQ-L2-EFFORT-HIP-PITCH
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      The commanded torque at either hip pitch joint must not exceed 120 N·m.
+    limit: 120.0
+    unit: N·m
+    comparator: at_most
+    allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-LOCOMOTION]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_HIP_PITCH'
+    measured_source: >-
+      asimov-mjlab, asimov_constants.py constant EFFORT_HIP_PITCH (measured
+      value 120.0), applied as the effort_limit of ASIMOV_ACTUATOR_HIP_PITCH
+      and reaching the compiled model as actuator forcerange ±120.
+    basis: >-
+      The peak torque of the hip pitch motor, EC-A6416-P2-25. Stated by
+      asimov-mjlab's src/mjlab/asset_zoo/robots/asimov/README.md Motor
+      Specifications table ("Hip Pitch | EC-A6416-P2-25 | 25:1 | 120 Nm | 55
+      Nm") and by the Asimov v0 manual's motor table. See
+      docs/datasheets/ATTRIBUTION.md for the vendor-attribution discrepancy on
+      these part numbers.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_effort_limits_match_datasheet_peak_torques'
+
+  - id: REQ-L2-EFFORT-HIP-ROLL
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      The commanded torque at either hip roll joint must not exceed 90 N·m.
+    limit: 90.0
+    unit: N·m
+    comparator: at_most
+    allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-BALANCE]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_HIP_ROLL'
+    measured_source: >-
+      asimov-mjlab, asimov_constants.py constant EFFORT_HIP_ROLL (measured
+      value 90.0), applied as the effort_limit of ASIMOV_ACTUATOR_HIP_ROLL.
+    basis: >-
+      The peak torque of the hip roll motor, EC-A5013-H17-100, stated by
+      asimov-mjlab's asimov README Motor Specifications table ("Hip Roll |
+      EC-A5013-H17-100 | 100:1 | 90 Nm | 45 Nm").
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_effort_limits_match_datasheet_peak_torques'
+
+  - id: REQ-L2-EFFORT-HIP-YAW
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      The commanded torque at either hip yaw joint must not exceed 60 N·m.
+    limit: 60.0
+    unit: N·m
+    comparator: at_most
+    allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-LOCOMOTION]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_HIP_YAW'
+    measured_source: >-
+      asimov-mjlab, asimov_constants.py constant EFFORT_HIP_YAW (measured
+      value 60.0), applied as the effort_limit of ASIMOV_ACTUATOR_HIP_YAW.
+    basis: >-
+      The peak torque of the hip yaw motor, EC-A3814-H14-107, stated by
+      asimov-mjlab's asimov README Motor Specifications table ("Hip Yaw |
+      EC-A3814-H14-107 | 107:1 | 60 Nm | 30 Nm").
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_effort_limits_match_datasheet_peak_torques'
+
+  - id: REQ-L2-EFFORT-KNEE
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      The commanded torque at either knee joint must not exceed 75 N·m.
+    limit: 75.0
+    unit: N·m
+    comparator: at_most
+    allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-LOCOMOTION]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_KNEE'
+    measured_source: >-
+      asimov-mjlab, asimov_constants.py constant EFFORT_KNEE (measured value
+      75.0), applied as the effort_limit of ASIMOV_ACTUATOR_KNEE.
+    basis: >-
+      The peak torque of the knee motor, EC-A4315-P2-36, stated by
+      asimov-mjlab's asimov README Motor Specifications table ("Knee |
+      EC-A4315-P2-36 | 36:1 | 75 Nm | 50 Nm").
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_effort_limits_match_datasheet_peak_torques'
+
+  - id: REQ-L2-EFFORT-ANKLE
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      The commanded torque at any ankle pitch or ankle roll joint must not
+      exceed 36 N·m.
+    limit: 36.0
+    unit: N·m
+    comparator: at_most
+    allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-BALANCE]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_ANKLE'
+    measured_source: >-
+      asimov-mjlab, asimov_constants.py constant EFFORT_ANKLE (measured value
+      36.0), applied as the effort_limit of ASIMOV_ACTUATOR_ANKLE, whose
+      joint_names_expr covers both ankle pitch and ankle roll.
+    basis: >-
+      The peak torque of the ankle motor, EC-A4310-P2-36, stated by
+      asimov-mjlab's asimov README Motor Specifications table ("Ankle
+      Pitch/Roll | EC-A4310-P2-36 | 36:1 | 36 Nm | 18 Nm"). Both ankle joints
+      use the same motor, which is why one requirement covers four joints.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_effort_limits_match_datasheet_peak_torques'
+
+  - id: REQ-L2-DAMPING-CEILING
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      The velocity feedback gain of every locomotion actuator must not exceed
+      5.0 N·m·s/rad, the highest value the motor firmware can realise.
+    limit: 5.0
+    unit: N·m·s/rad
+    comparator: at_most
+    allocated_to: [SFN-TORQUE-LIMIT, SUB-SW-CONTROL, FN-JOINT-POSITION-CONTROL]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#DAMPING_HIP_PITCH,DAMPING_HIP_ROLL,DAMPING_HIP_YAW,DAMPING_KNEE,DAMPING_ANKLE'
+    measured_source: >-
+      asimov-mjlab, asimov_constants.py constants DAMPING_HIP_PITCH,
+      DAMPING_HIP_ROLL, DAMPING_HIP_YAW, DAMPING_KNEE and DAMPING_ANKLE
+      (measured value 5.0 for all five).
+    basis: >-
+      A hardware limit written as a comment, and this register is where it
+      becomes a requirement. asimov_constants.py says "# Damping (KD) - capped
+      at hardware max 5.0 Nm·s/rad for sim2real"; asimov-mjlab's asimov
+      README says "we cap KD at 5.0 Nm·s/rad for all joints due to hardware
+      limitations. The Synapticon motors have a maximum KD of 5.0 that can be
+      achieved in firmware", and explains that a policy trained on a
+      physics-optimal KD of roughly 8 to 12 would not deploy. All five
+      constants sit exactly at the ceiling, so any increase fails.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_damping_never_exceeds_the_hardware_maximum'
+
+  - id: REQ-L2-STIFFNESS-FORMULA
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      All 5 locomotion actuator configurations must set stiffness to the
+      reflected inertia multiplied by the square of the 10 Hz natural
+      frequency, so the closed-loop bandwidth is the same at every joint.
+    limit: 5
+    unit: actuator configurations satisfying stiffness = armature × natural_freq²
+    comparator: equals
+    allocated_to: [SUB-SW-CONTROL, FN-JOINT-POSITION-CONTROL]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#STIFFNESS_HIP_PITCH,STIFFNESS_HIP_ROLL,STIFFNESS_HIP_YAW,STIFFNESS_KNEE,STIFFNESS_ANKLE_PITCH,STIFFNESS_ANKLE_ROLL'
+    measured_source: >-
+      asimov-mjlab, asimov_constants.py: each STIFFNESS_* constant is written
+      as ARMATURE_* * NATURAL_FREQ**2, with NATURAL_FREQ = 10 * 2.0 *
+      3.1415926535. Resulting gains 257.4, 394.8, 135.4, 130.3 and 93.2
+      N·m/rad.
+    basis: >-
+      asimov_constants.py states the rule in its header — "KP = J_reflected *
+      omega_n^2 (with omega_n = 10 Hz * 2*pi)" — and asimov-mjlab's asimov
+      README repeats it with the resulting gain table. Stated as a count of
+      conforming configurations rather than as a tolerance because the source
+      computes the product rather than hard-coding it: the requirement is that
+      it keeps doing so.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_stiffness_equals_armature_times_natural_frequency_squared'
+
+  - id: REQ-L2-REFLECTED-INERTIA
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      Each actuator armature must equal its motor rotor inertia multiplied by
+      the square of its gear ratio, to within 0.5 percent.
+    limit: 0.5
+    unit: '% relative deviation from rotor_inertia × gear_ratio²'
+    comparator: at_most
+    allocated_to: [SUB-SW-CONTROL, FN-JOINT-POSITION-CONTROL]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#ARMATURE_HIP_PITCH,ARMATURE_HIP_ROLL,ARMATURE_HIP_YAW,ARMATURE_KNEE,ARMATURE_ANKLE_PITCH,ARMATURE_ANKLE_ROLL'
+    measured_source: >-
+      asimov-mjlab, asimov_constants.py constants ARMATURE_HIP_PITCH 0.0652,
+      ARMATURE_HIP_ROLL 0.100, ARMATURE_HIP_YAW 0.0343, ARMATURE_KNEE 0.0330
+      and ARMATURE_ANKLE_PITCH / ARMATURE_ANKLE_ROLL 0.0236 kg·m², against
+      rotor inertias 104.395, 10.0, 3.0, 25.5 and 18.2 kg·mm² at gear ratios
+      25, 100, 107, 36 and 36. Largest measured deviation 0.145 percent, at
+      the knee.
+    basis: >-
+      asimov-mjlab's asimov README derives the formula from energy
+      conservation — "J_reflected = J_rotor × (gear_ratio)²" — and tabulates
+      both the rotor inertias and the resulting armatures; asimov_constants.py
+      repeats the arithmetic per joint in comments. The 0.5 percent budget is
+      the rounding the published armatures already carry: they are given to
+      three significant figures, so a value like 0.0343 admits up to 0.146
+      percent of half-ulp error before any real drift. Not a tolerance chosen
+      for comfort — anything looser would stop catching a changed gear ratio.
+      Checked against the asimov-mjlab table rather than the vendor
+      datasheets, and deliberately: three of the five rotor inertias differ
+      between the two sources, worst at the ankle where the vendor's
+      19 kg·mm² would give 0.0246 kg·m² against the 0.0236 the model uses, a
+      4.2 percent deviation. This requirement states that the constants agree
+      with the table documenting them, which is a promise the project can
+      keep; which rotor inertia is physically right is recorded as an open
+      question in docs/datasheets/ATTRIBUTION.md rather than averaged away.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_armature_equals_rotor_inertia_times_gear_ratio_squared'
+
+  - id: REQ-L2-ACTUATOR-COVERAGE
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      The actuator joint-name patterns must match all 12 actuated joints of
+      the locomotion model, each joint matched by exactly one pattern.
+    limit: 12
+    unit: actuated joints matched by exactly one actuator pattern
+    comparator: equals
+    allocated_to: [SUB-SW-CONTROL, FN-JOINT-POSITION-CONTROL, FN-LOCOMOTION]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#ASIMOV_ARTICULATION.actuators[].joint_names_expr'
+    measured_source: >-
+      asimov-mjlab: the five joint_names_expr tuples in asimov_constants.py
+      against the 12 named hinge joints of
+      src/mjlab/asset_zoo/robots/asimov/xmls/asimov.xml, which are the six
+      left-leg and six right-leg joints beside a floating base.
+    basis: >-
+      asimov_constants.py's docstring states "Asimov is a 12-DOF bipedal robot
+      with 6 joints per leg". A joint matched by no pattern would be
+      unactuated in training and actuated on the robot, and a joint matched by
+      two would take whichever gain applied last, so both directions are
+      failures. This is also where the register records the honest gap: this
+      model covers 12 of the 25 actuated joints REQ-L1-ACTUATED-JOINTS
+      requires, because it is the locomotion subset and not the whole robot.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_actuator_patterns_cover_every_actuated_joint_exactly_once'
+
+  - id: REQ-L2-CONTROL-CHANNELS
+    level: L2
+    parent: REQ-L1-TORQUE-LIMITED
+    statement: >-
+      Exactly 12 control channels in the compiled locomotion model must be
+      torque limited, one per actuated joint, so that no path to a motor
+      bypasses its effort limit.
+    limit: 12
+    unit: force-limited actuators in the compiled model
+    comparator: equals
+    allocated_to: [SFN-TORQUE-LIMIT, SUB-SW-CONTROL, FN-JOINT-POSITION-CONTROL]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/xmls/asimov.xml#count(compiled actuators with actuator_forcelimited == 1)'
+    measured_source: >-
+      asimov-mjlab: the compiled locomotion model has 24 actuators, not 12. Two
+      per joint — the 12 <position> actuators asimov_constants.py configures,
+      named for their joint and force limited at the motor peak torque, and 12
+      <motor> actuators named "<joint>_ctrl" that asimov.xml ships in its own
+      <actuator> block. Measured: 12 force limited, 12 not.
+    basis: >-
+      A defect this register records rather than one it invents a number for.
+      The requirement is satisfied as counted — 12 channels are limited, one
+      per joint — and the honest reading is that the model still exposes 12
+      more that are not, so writing to a "<joint>_ctrl" input reaches the motor
+      with no effort limit in the way. unitree_g1's MJCF declares no actuator
+      block, which is why test_g1_constants.py can assert that every compiled
+      actuator is force limited and the Asimov suite cannot. The verifying
+      tests pin both counts, so removing the inherited block fails them and
+      forces this entry to be updated with the fix.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_every_locomotion_joint_carries_a_finite_effort_limit'
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_locomotion_model_declares_twelve_actuated_joints'
+
+  - id: REQ-L2-CAN-DROP-PER-JOINT
+    level: L2
+    parent: REQ-L1-ACTUATED-JOINTS
+    statement: >-
+      The wiring harness must give all 25 actuated joints a connector carrying
+      both battery power and the CAN pair.
+    limit: 25
+    unit: XT30(2+2) actuator connectors carrying BATT+, BATT-, CAN_H and CAN_L
+    comparator: equals
+    allocated_to:
+      - SUB-BUS-C0
+      - SUB-BUS-C1
+      - SUB-BUS-C2
+      - SUB-BUS-C3
+      - SUB-BUS-C4
+      - FN-JOINT-POSITION-CONTROL
+      - FN-POWER-MANAGEMENT
+    measures: 'electrical/wiring/wiring.yaml#count(/connectors[type="XT30(2+2)"])'
+    measured_source: >-
+      electrical/wiring/wiring.yaml: 25 of the 40 connectors are type
+      "XT30(2+2)" with pinlabels [BATT+, BATT-, CAN_H, CAN_L] — 6 per leg,
+      5 per arm, 2 neck, 1 waist yaw. The remaining 15 are bus roots and power
+      roots.
+    basis: >-
+      Values stated by the harness. The count matching REQ-L1-ACTUATED-JOINTS
+      exactly is the cross-artifact check this requirement exists for: a joint
+      added to the simulation model without a connector, or a connector
+      without a joint, breaks the equality.
+    verifies:
+      - 'tests/requirements/test_wiring.py::test_every_actuated_joint_has_a_power_and_can_drop'
+
+  - id: REQ-L2-CABLE-NAMING
+    level: L2
+    parent: REQ-L1-CAN-DOMAINS
+    statement: >-
+      All 53 cables in the harness must follow the W-<ID>-<PWR|SIG> naming
+      convention the electrical documentation declares.
+    limit: 53
+    unit: cables matching W-<ID>-<PWR|SIG>
+    comparator: equals
+    allocated_to: [FN-POWER-MANAGEMENT, FN-JOINT-POSITION-CONTROL]
+    measures: 'electrical/wiring/wiring.yaml#/cables'
+    measured_source: >-
+      electrical/wiring/wiring.yaml: 53 cable keys, ids 1 to 31, split 26 PWR
+      and 27 SIG; all 53 match the convention today.
+    basis: >-
+      electrical/README.md declares the convention verbatim — "W-<ID>-<TYPE>,
+      ID = unique ID, TYPE = Power (PWR) or Signal (SIG) cable bundle". The
+      requirement matters beyond tidiness: the PWR and SIG suffix is what
+      separates the power tree from the CAN tree when the harness is read as a
+      graph.
+    verifies:
+      - 'tests/requirements/test_wiring.py::test_every_cable_follows_the_declared_naming_convention'
+
+  - id: REQ-L2-HARNESS-GAUGE
+    level: L2
+    parent: REQ-L2-CABLE-NAMING
+    statement: >-
+      All 53 cables must carry the gauge their type implies — 17 AWG for
+      power, 26 AWG for signal — with two conductors each.
+    limit: 53
+    unit: cables whose gauge and conductor count match their PWR or SIG type
+    comparator: equals
+    allocated_to: [FN-POWER-MANAGEMENT, FN-JOINT-POSITION-CONTROL]
+    measures: 'electrical/wiring/wiring.yaml#/cables/*/gauge'
+    measured_source: >-
+      electrical/wiring/wiring.yaml: all 26 PWR cables are 17 AWG with colors
+      [RD, BK]; all 27 SIG cables are 26 AWG with colors [WH, BK]; every cable
+      has wirecount 2.
+    basis: >-
+      Values stated by the harness, uniformly and without exception, which is
+      what makes them a rule rather than a coincidence. The requirement pins
+      the pairing so a power run specified at signal gauge fails.
+    verifies:
+      - 'tests/requirements/test_wiring.py::test_power_and_signal_cables_carry_their_declared_gauge'
+
+  - id: REQ-L2-NATIVE-CAN-PORTS
+    level: L2
+    parent: REQ-L1-CAN-DOMAINS
+    statement: >-
+      Exactly 3 of the six CAN domains must be served by the compute module's
+      own CAN controllers.
+    limit: 3
+    unit: native CAN interfaces
+    comparator: equals
+    allocated_to: [SUB-ELEC-MCB, SUB-BUS-C0, SUB-BUS-C1, SUB-BUS-C2]
+    measures: 'electrical/motion_control/mcb-io.dts#count(nodes with compatible "rockchip,can-2.0")'
+    measured_source: >-
+      electrical/motion_control/mcb-io.dts: fragments 5, 6 and 7 target can0,
+      can1 and can2, each with compatible "rockchip,can-2.0", status "okay"
+      and assigned-clock-rates 200000000.
+    basis: >-
+      electrical/README.md's Communication Ports table states "CAN (Native) |
+      3 | Direct CAN interfaces". The ceiling is the compute module's, not a
+      board choice — see REQ-L3-CM5-CAN-CONTROLLERS.
+    verifies:
+      - 'tests/requirements/test_bus_domains.py::test_three_can_domains_are_native_and_three_are_spi_bridges'
+
+  - id: REQ-L2-SPI-CAN-BRIDGES
+    level: L2
+    parent: REQ-L1-CAN-DOMAINS
+    statement: >-
+      The remaining 3 CAN domains must be served by SPI-to-CAN bridge
+      controllers on a single SPI bus.
+    limit: 3
+    unit: MCP2518FD SPI-CAN controllers
+    comparator: equals
+    allocated_to: [SUB-ELEC-MCB, SUB-BUS-C3, SUB-BUS-C4, SUB-BUS-C5]
+    measures: 'electrical/motion_control/mcb-io.dts#count(nodes with compatible "microchip,mcp2518fd")'
+    measured_source: >-
+      electrical/motion_control/mcb-io.dts: can3, can4 and can5 are
+      mcp2518fd@0, @1 and @2 on spi0, which declares num-cs 3, max-freq
+      20000000 and three chip-select GPIOs; each bridge takes its clock from
+      the 40 MHz fixed can_clock.
+    basis: >-
+      electrical/README.md's Communication Ports table states "CAN (SPI-CAN) |
+      3 | CAN via SPI bridge". Three bridges is exactly the shortfall between
+      the six domains the port map declares and the three native controllers
+      the compute module provides, which is the derivation this level of the
+      register exists to record.
+    verifies:
+      - 'tests/requirements/test_bus_domains.py::test_three_can_domains_are_native_and_three_are_spi_bridges'
+
+  # =========================================================================
+  # L3 — component requirements, from vendor documents.
+  #
+  # These are properties of parts, not of the robot, so most of them have no
+  # actual anywhere in the repository to compare against. The two that do are
+  # the ones where a board-level choice is bounded by a part-level ceiling.
+  # =========================================================================
+
+  - id: REQ-L3-MOTOR-HIP-PITCH-PEAK
+    level: L3
+    parent: REQ-L2-EFFORT-HIP-PITCH
+    statement: >-
+      The hip pitch actuator must deliver at least 120 N·m of peak torque.
+    limit: 120.0
+    unit: N·m
+    comparator: at_least
+    allocated_to: [SUB-MECH-500, SUB-MECH-600, SFN-TORQUE-LIMIT]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/README.md#motor-specifications/hip-pitch/peak-torque'
+    measured_source: >-
+      asimov-mjlab, src/mjlab/asset_zoo/robots/asimov/README.md Motor
+      Specifications table, row "Hip Pitch | EC-A6416-P2-25 | 25:1 | 120 Nm |
+      55 Nm".
+    basis: >-
+      The part is EC-A6416-P2-25 at a 25:1 reduction. Peak torque 120 N·m is
+      stated identically by the in-repo motor table, by the Asimov v0 manual,
+      and by the vendor datasheet recorded in docs/datasheets/ATTRIBUTION.md
+      (sha256 85d627f5…). The rated torque is not: the in-repo table says
+      55 N·m and the vendor datasheet says 40 N·m, so no rated figure is
+      written into this register. Note that the vendor is Nanjing Encos, not
+      Synapticon as asimov-mjlab states throughout; see ATTRIBUTION.md.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_effort_limits_match_datasheet_peak_torques'
+
+  - id: REQ-L3-MOTOR-KNEE-PEAK
+    level: L3
+    parent: REQ-L2-EFFORT-KNEE
+    statement: >-
+      The knee actuator must deliver at least 75 N·m of peak torque.
+    limit: 75.0
+    unit: N·m
+    comparator: at_least
+    allocated_to: [SUB-MECH-500, SUB-MECH-600, SFN-TORQUE-LIMIT]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/README.md#motor-specifications/knee/peak-torque'
+    measured_source: >-
+      asimov-mjlab, src/mjlab/asset_zoo/robots/asimov/README.md Motor
+      Specifications table, row "Knee | EC-A4315-P2-36 | 36:1 | 75 Nm | 50 Nm".
+    basis: >-
+      The part is EC-A4315-P2-36 at a 36:1 reduction. Peak torque 75 N·m
+      agrees across the in-repo table, the Asimov v0 manual and the vendor
+      datasheet (docs/datasheets/ATTRIBUTION.md, sha256 305dc469…). Rated
+      torque does not agree — 50 N·m in repo against 25 N·m on the datasheet —
+      and is therefore absent here.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_effort_limits_match_datasheet_peak_torques'
+
+  - id: REQ-L3-MOTOR-ANKLE-PEAK
+    level: L3
+    parent: REQ-L2-EFFORT-ANKLE
+    statement: >-
+      Each ankle actuator must deliver at least 36 N·m of peak torque.
+    limit: 36.0
+    unit: N·m
+    comparator: at_least
+    allocated_to: [SUB-MECH-500, SUB-MECH-600, SFN-TORQUE-LIMIT]
+    measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/README.md#motor-specifications/ankle/peak-torque'
+    measured_source: >-
+      asimov-mjlab, src/mjlab/asset_zoo/robots/asimov/README.md Motor
+      Specifications table, row "Ankle Pitch/Roll | EC-A4310-P2-36 | 36:1 |
+      36 Nm | 18 Nm".
+    basis: >-
+      The part is EC-A4310-P2-36 at a 36:1 reduction, one per ankle joint and
+      two per foot. Peak torque 36 N·m agrees across the in-repo table, the
+      Asimov v0 manual and the vendor datasheet
+      (docs/datasheets/ATTRIBUTION.md, sha256 36deb935…). Rated torque does
+      not — 18 N·m in repo against 12 N·m on the datasheet — and neither does
+      rotor inertia; both disagreements are tabulated in ATTRIBUTION.md.
+    verifies:
+      - 'asimov-mjlab:tests/test_asimov_constants.py::test_effort_limits_match_datasheet_peak_torques'
+
+  - id: REQ-L3-CM5-CAN-CONTROLLERS
+    level: L3
+    parent: REQ-L2-NATIVE-CAN-PORTS
+    statement: >-
+      The compute module provides at most 3 native CAN controllers, so no
+      design may enable a fourth.
+    limit: 3
+    unit: native CAN controllers
+    comparator: at_most
+    allocated_to: [SUB-ELEC-MCB]
+    measures: 'electrical/motion_control/mcb-io.dts#count(nodes with compatible "rockchip,can-2.0")'
+    measured_source: >-
+      docs/datasheets/radxa_cm5_product_brief.pdf, section 3 Specification,
+      Connectivity row: "Up to 3x CAN". The board's use of that budget is in
+      electrical/motion_control/mcb-io.dts, which enables exactly three
+      rockchip CAN nodes.
+    basis: >-
+      Radxa CM5 Product Brief revision 1.3, dated 2024-09-04, for the Rockchip
+      RK3588S2 and RK3582 module the electrical README names as the board's
+      carrier target. This is the ceiling that forces REQ-L2-SPI-CAN-BRIDGES
+      to exist: six declared bus domains against three native controllers is
+      exactly three bridges.
+    verifies:
+      - 'tests/requirements/test_bus_domains.py::test_three_can_domains_are_native_and_three_are_spi_bridges'
+
+  - id: REQ-L3-CM5-AVAILABILITY
+    level: L3
+    statement: >-
+      The compute module must remain available for purchase until at least
+      2032, so a kit shipped in 2026 stays repairable.
+    limit: 2032
+    unit: calendar year of guaranteed availability
+    comparator: at_least
+    allocated_to: [SUB-ELEC-MCB]
+    measured_source: >-
+      docs/datasheets/radxa_cm5_product_brief.pdf, section 8 Availability.
+    basis: >-
+      Radxa CM5 Product Brief revision 1.3 states "Radxa guarantees
+      availability Radxa CM5 until at least September 2032." Carried as the
+      year because the register's limits are numeric; the month is in the
+      quoted sentence, not lost. No parent: the obvious candidate is
+      REQ-L0-KIT-COST, which is two levels up, and there is no stated system-
+      or subsystem-level service-life requirement in between to derive from —
+      so the entry stands on its own rather than inventing the intermediate.
+      Nothing in either repository can verify a supplier commitment, so no
+      test.
+
+  - id: REQ-L3-IMU-TEMPERATURE-MIN
+    level: L3
+    statement: >-
+      The board inertial measurement unit must operate at ambient temperatures
+      down to -40 °C.
+    limit: -40.0
+    unit: °C
+    comparator: at_most
+    allocated_to: [SUB-ELEC-MCB, FN-STATE-ESTIMATION]
+    measured_source: >-
+      STMicroelectronics LSM6DSV datasheet DS13476 rev 5, section 4.1
+      Mechanical characteristics, parameter Top: operating temperature range
+      -40 to +85 °C.
+    basis: >-
+      The part is the LSM6DSV that electrical/README.md places at the bottom
+      of the Motion Control Board. No operating-temperature requirement is
+      stated for the robot anywhere, so this entry has no parent — writing one
+      would mean inventing the system-level environmental requirement it would
+      derive from. The datasheet is not redistributable; see
+      docs/datasheets/ATTRIBUTION.md. No test.

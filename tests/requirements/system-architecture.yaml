@@ -1,0 +1,538 @@
+# Declared system architecture — Asimov v1
+#
+# The system tree this project states about itself, plus the function list the
+# architecture identifies. It is machine-readable so that a requirement can be
+# allocated to a subsystem or a function by id rather than by prose.
+#
+# Sourcing rule, and the reason this file exists at all: every subsystem below
+# is named by an artifact in this repository that declares it. Nothing here is
+# reconstructed from part-name or link-name prefixes. Where the declared
+# sources disagree, or where a subsystem the project names has no artifact
+# behind it, the entry says so in `gap` rather than picking a plausible answer.
+#
+# `declared_by` cites the artifact and quotes what it states.
+# `evidenced_by` cites artifacts that support a function without naming it.
+# The distinction matters: subsystems are declared by the project, functions
+# are declared by this file and evidenced by the project.
+
+schema_version: 1
+
+system:
+  id: SYS-ASV1
+  name: Asimov v1
+  kind: system
+  declared_by:
+    - path: README.md
+      states: >-
+        "Asimov v1 is a 1.2 m, 35 kg biped with 25 actuated degrees of freedom.
+        This repository contains the mechanical CAD, electrical CAD, simulation
+        model, and onboard software to build, simulate, and customize Asimov
+        v1."
+  contains:
+    - SUB-MECH-100
+    - SUB-MECH-200
+    - SUB-MECH-300
+    - SUB-MECH-400
+    - SUB-MECH-500
+    - SUB-MECH-600
+    - SUB-MECH-700
+    - SUB-BUS-C0
+    - SUB-BUS-C1
+    - SUB-BUS-C2
+    - SUB-BUS-C3
+    - SUB-BUS-C4
+    - SUB-BUS-C5
+    - SUB-ELEC-MCB
+    - SUB-SW-CONTROL
+
+# ---------------------------------------------------------------------------
+# Mechanical subassemblies.
+#
+# The project declares two things that must be read together: the naming
+# convention gives nine subassembly codes with names, and the fabrication
+# manifest lists the seven that have a CAD directory. Codes 350 (Right Hand)
+# and 450 (Left Hand) are named by the convention and absent from the manifest,
+# so they are recorded as declared-but-absent below rather than dropped.
+# ---------------------------------------------------------------------------
+
+subsystems:
+
+  - id: SUB-MECH-100
+    name: Torso
+    kind: mechanical_subassembly
+    code: "100"
+    parent: SYS-ASV1
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Torso | 100"'
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] contains "100"; 13 entries carry subassembly "100"'
+    measures:
+      part_count: 'mechanical/FABRICATION_MANIFEST.json#/entries[?subassembly=="100"]'
+
+  - id: SUB-MECH-200
+    name: Waist
+    kind: mechanical_subassembly
+    code: "200"
+    parent: SYS-ASV1
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Waist | 200"'
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] contains "200"; 16 entries carry subassembly "200"'
+    measures:
+      part_count: 'mechanical/FABRICATION_MANIFEST.json#/entries[?subassembly=="200"]'
+
+  - id: SUB-MECH-300
+    name: Right arm
+    kind: mechanical_subassembly
+    code: "300"
+    parent: SYS-ASV1
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Right Arm | 300"'
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] contains "300"; 23 entries carry subassembly "300"'
+    measures:
+      part_count: 'mechanical/FABRICATION_MANIFEST.json#/entries[?subassembly=="300"]'
+
+  - id: SUB-MECH-400
+    name: Left arm
+    kind: mechanical_subassembly
+    code: "400"
+    parent: SYS-ASV1
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Left Arm | 400"'
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] contains "400"; 23 entries carry subassembly "400"'
+    measures:
+      part_count: 'mechanical/FABRICATION_MANIFEST.json#/entries[?subassembly=="400"]'
+
+  - id: SUB-MECH-500
+    name: Right leg
+    kind: mechanical_subassembly
+    code: "500"
+    parent: SYS-ASV1
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Right Leg | 500"'
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] contains "500"; 41 entries carry subassembly "500"'
+    measures:
+      part_count: 'mechanical/FABRICATION_MANIFEST.json#/entries[?subassembly=="500"]'
+
+  - id: SUB-MECH-600
+    name: Left leg
+    kind: mechanical_subassembly
+    code: "600"
+    parent: SYS-ASV1
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Left Leg | 600"'
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] contains "600"; 41 entries carry subassembly "600"'
+    measures:
+      part_count: 'mechanical/FABRICATION_MANIFEST.json#/entries[?subassembly=="600"]'
+
+  - id: SUB-MECH-700
+    name: Head
+    kind: mechanical_subassembly
+    code: "700"
+    parent: SYS-ASV1
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Head | 700"'
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] contains "700"; 13 entries carry subassembly "700"'
+    measures:
+      part_count: 'mechanical/FABRICATION_MANIFEST.json#/entries[?subassembly=="700"]'
+
+  # -------------------------------------------------------------------------
+  # Bus domains.
+  #
+  # The Motion Control Board's port map is a declared decomposition: six CAN
+  # ports, each named for the part of the robot it serves. The device tree
+  # overlay declares the same six interfaces to Linux, three native and three
+  # over SPI, which is where the port map becomes machine-checkable.
+  # -------------------------------------------------------------------------
+
+  - id: SUB-BUS-C0
+    name: Left leg bus
+    kind: bus_domain
+    port: C0
+    parent: SYS-ASV1
+    serves: [SUB-MECH-600]
+    declared_by:
+      - path: electrical/README.md
+        states: 'Port Mapping table: "C0 | Left leg bus"'
+      - path: electrical/motion_control/mcb-io.dts
+        states: 'fragment@5 targets &can0, compatible "rockchip,can-2.0", status "okay"'
+      - path: electrical/README.md
+        states: 'Communication Ports table: "CAN (Native) | 3 | Direct CAN interfaces"'
+
+  - id: SUB-BUS-C1
+    name: Right leg bus
+    kind: bus_domain
+    port: C1
+    parent: SYS-ASV1
+    serves: [SUB-MECH-500]
+    declared_by:
+      - path: electrical/README.md
+        states: 'Port Mapping table: "C1 | Right leg bus"'
+      - path: electrical/motion_control/mcb-io.dts
+        states: 'fragment@6 targets &can1, compatible "rockchip,can-2.0", status "okay"'
+
+  - id: SUB-BUS-C2
+    name: Right arm bus
+    kind: bus_domain
+    port: C2
+    parent: SYS-ASV1
+    serves: [SUB-MECH-300]
+    declared_by:
+      - path: electrical/README.md
+        states: 'Port Mapping table: "C2 | Right arm bus"'
+      - path: electrical/motion_control/mcb-io.dts
+        states: 'fragment@7 targets &can2, compatible "rockchip,can-2.0", status "okay"'
+
+  - id: SUB-BUS-C3
+    name: Left arm bus
+    kind: bus_domain
+    port: C3
+    parent: SYS-ASV1
+    serves: [SUB-MECH-400]
+    declared_by:
+      - path: electrical/README.md
+        states: 'Port Mapping table: "C3 | Left arm bus"'
+      - path: electrical/motion_control/mcb-io.dts
+        states: 'can3: mcp2518fd@0 on &spi0, compatible "microchip,mcp2518fd", status "okay"'
+      - path: electrical/README.md
+        states: 'Communication Ports table: "CAN (SPI-CAN) | 3 | CAN via SPI bridge"'
+
+  - id: SUB-BUS-C4
+    name: Waist-neck bus
+    kind: bus_domain
+    port: C4
+    parent: SYS-ASV1
+    serves: [SUB-MECH-200, SUB-MECH-700]
+    declared_by:
+      - path: electrical/README.md
+        states: 'Port Mapping table: "C4 | Waist-neck bus"'
+      - path: electrical/README.md
+        states: >-
+          "The waist-neck bus requires a different cabling setup for this
+          revision of the MCB: Waist -> Neck yaw -> Neck pitch -> MCB port C4"
+      - path: electrical/motion_control/mcb-io.dts
+        states: 'can4: mcp2518fd@1 on &spi0, compatible "microchip,mcp2518fd", status "okay"'
+    note: >-
+      The only bus domain that serves two mechanical subassemblies. The cabling
+      order the electrical README states runs waist yaw (subassembly 200) then
+      the two neck joints, and the naming convention places the head at 700.
+
+  - id: SUB-BUS-C5
+    name: BMS bus
+    kind: bus_domain
+    port: C5
+    parent: SYS-ASV1
+    serves: []
+    declared_by:
+      - path: electrical/README.md
+        states: 'Port Mapping table: "C5 | BMS bus"'
+      - path: electrical/wiring/wiring.yaml
+        states: >-
+          connectors "BMS" (soldered, CAN_H/CAN_L), "BMS Root SIG"
+          (MOLEX KK 254 2 pin), "BMS Power" (XT-60) and "BMS Power Sink" (XT-30)
+      - path: electrical/motion_control/mcb-io.dts
+        states: 'can5: mcp2518fd@2 on &spi0, compatible "microchip,mcp2518fd", status "okay"'
+    gap: >-
+      No mechanical subassembly is declared for the battery or its management
+      system. The naming convention names nine subassembly codes and none of
+      them is a battery, and the DIY kit table in README.md lists "Battery"
+      under Not Included. So this bus domain serves nothing in the mechanical
+      tree, and that is a real hole in the declared decomposition rather than a
+      mapping this file failed to find.
+
+  - id: SUB-ELEC-MCB
+    name: Motion control board
+    kind: electronic_assembly
+    parent: SYS-ASV1
+    declared_by:
+      - path: electrical/README.md
+        states: >-
+          "The Motion Control Board (MCB) is a carrier board designed for the
+          Radxa CM5, providing comprehensive connectivity for robotic
+          applications."
+      - path: electrical/README.md
+        states: >-
+          "The LSM6DSV IMU is located at the bottom of the board, with an I2C
+          connector available if an external IMU is required."
+      - path: electrical/README.md
+        states: '"Power is supplied via a 5V input through an XT30 connector."'
+      - path: electrical/motion_control/board/board.kicad_pro
+        states: KiCad project for the board
+    contains:
+      - SUB-BUS-C0
+      - SUB-BUS-C1
+      - SUB-BUS-C2
+      - SUB-BUS-C3
+      - SUB-BUS-C4
+      - SUB-BUS-C5
+    components:
+      - part: Radxa CM5
+        role: compute module
+        declared_by: electrical/README.md
+      - part: LSM6DSV
+        role: inertial measurement unit
+        declared_by: electrical/README.md
+      - part: MCP2518FD
+        role: SPI-to-CAN controller, three instances
+        declared_by: electrical/motion_control/mcb-io.dts
+    gap: >-
+      The project does not declare which mechanical subassembly the board
+      mounts into. The README specification table has a "Torso" row listing a
+      6 DOF IMU, but that row is a functional region and not the CAD
+      subassembly 100, so no containment edge is asserted here.
+
+  - id: SUB-SW-CONTROL
+    name: Control software
+    kind: software
+    parent: SYS-ASV1
+    declared_by:
+      - path: README.md
+        states: >-
+          "This repository contains the mechanical CAD, electrical CAD,
+          simulation model, and onboard software to build, simulate, and
+          customize Asimov v1."
+      - path: electrical/motion_control/mcb-io.dts
+        states: device tree overlay enabling the six CAN interfaces and two I2C buses
+      - path: scripts/generate_fabrication_manifest.py
+        states: fabrication manifest generator with a --check mode
+    gap: >-
+      The two largest pieces of this subsystem are declared as planned rather
+      than present. README.md's roadmap marks "Asimov API" and "Locomotion
+      policy" with the planned marker, not the shipped one. The locomotion
+      policy is developed in a separate repository, asimovinc/asimov-mjlab,
+      which models a 12-DOF locomotion subset of this robot's 25 actuated
+      joints.
+
+# ---------------------------------------------------------------------------
+# Subassembly codes the naming convention declares and the CAD tree does not
+# contain. Kept so that a reader asking "where are the hands?" gets an answer.
+# ---------------------------------------------------------------------------
+
+declared_absent_subassemblies:
+  - code: "350"
+    name: Right hand
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Right Hand | 350"'
+    absent_from:
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] is ["100","200","300","400","500","600","700"]'
+  - code: "450"
+    name: Left hand
+    declared_by:
+      - path: mechanical/naming_convention.png
+        states: 'SUBASSEMBLY CODES table: "Left Hand | 450"'
+    absent_from:
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'subassemblies[] is ["100","200","300","400","500","600","700"]'
+
+# ---------------------------------------------------------------------------
+# Fabrication classes, declared by the manifest and by the naming convention's
+# manufacturing-method table. The two agree on four classes.
+# ---------------------------------------------------------------------------
+
+fabrication_classes:
+  - id: ALU_7075
+    suffix: A
+    method: CNC machining
+    material: Aluminium 7075
+    declared_by:
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'fabrication_classes[] contains "ALU_7075"'
+      - path: mechanical/naming_convention.png
+        states: 'MANUFACTURING METHODS table: "A | CNC Machining | Aluminum 7075"'
+  - id: SML_316L
+    suffix: B
+    method: 3D printing, SLM
+    material: 316L stainless steel
+    declared_by:
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'fabrication_classes[] contains "SML_316L"'
+      - path: mechanical/naming_convention.png
+        states: 'MANUFACTURING METHODS table: "B | 3DP - SLM | 316L Stainless"'
+  - id: MJF_PA12
+    suffix: C
+    method: 3D printing, HP multi jet fusion
+    material: PA12 nylon
+    declared_by:
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'fabrication_classes[] contains "MJF_PA12"'
+      - path: mechanical/naming_convention.png
+        states: 'MANUFACTURING METHODS table: "C | 3DP - MJF | PA12 Nylon"'
+  - id: OFF_THE_SHELF
+    suffix: X
+    method: Off-the-shelf
+    material: Various
+    declared_by:
+      - path: mechanical/FABRICATION_MANIFEST.json
+        states: 'fabrication_classes[] contains "OFF_THE_SHELF"'
+      - path: mechanical/naming_convention.png
+        states: 'MANUFACTURING METHODS table: "X | Off-the-shelf"'
+
+# ---------------------------------------------------------------------------
+# Functions.
+#
+# These are declared by this file. The project does not publish a function
+# list, so each entry carries `evidenced_by` — the artifacts that show the
+# function is real work the system does — rather than `declared_by`. A
+# function with no evidence says so instead of borrowing someone else's.
+# ---------------------------------------------------------------------------
+
+functions:
+
+  - id: FN-LOCOMOTION
+    name: Locomotion
+    allocated_to: [SUB-MECH-500, SUB-MECH-600, SUB-BUS-C0, SUB-BUS-C1, SUB-SW-CONTROL]
+    evidenced_by:
+      - path: sim-model/README.md
+        states: >-
+          "MuJoCo model for Asimov v1. 25 actuated joints, 28 link meshes,
+          friction-tuned foot contacts. Built for locomotion policy training
+          and hardware-in-the-loop testing."
+      - path: README.md
+        states: 'Roadmap table row "Locomotion policy", marked planned'
+      - path: sim-model/xmls/asimov.xml
+        states: twelve leg joints, six per leg, plus one passive toe joint per foot
+
+  - id: FN-BALANCE
+    name: Balance
+    allocated_to: [SUB-MECH-500, SUB-MECH-600, SUB-ELEC-MCB, SUB-SW-CONTROL]
+    evidenced_by:
+      - path: sim-model/xmls/asimov.xml
+        states: >-
+          sensor block declares subtreeangmom "root_angmom" on body
+          "pelvis_link", and gyro, velocimeter, accelerometer and framequat on
+          site "imu_in_pelvis"
+      - path: sim-model/README.md
+        states: '"friction-tuned foot contacts"'
+      - path: README.md
+        states: 'Activity table row "Squat | 5 kg"'
+
+  - id: FN-MANIPULATION
+    name: Manipulation
+    allocated_to: [SUB-MECH-300, SUB-MECH-400, SUB-BUS-C2, SUB-BUS-C3]
+    evidenced_by:
+      - path: README.md
+        states: >-
+          Specifications table: "Arms | 5 DOF x 2 (shoulder pitch/roll/yaw,
+          elbow, wrist yaw)"
+      - path: README.md
+        states: 'Activity table rows "Bicep curl | 15 kg each arm" and "Lateral raise | 18 kg each arm"'
+      - path: sim-model/xmls/asimov.xml
+        states: ten arm joints, five per arm
+    gap: >-
+      The naming convention declares Right Hand (350) and Left Hand (450) and
+      neither has CAD in this repository, and the DIY kit table lists "hands"
+      under Not Included. Manipulation therefore ends at the wrist here.
+
+  - id: FN-JOINT-POSITION-CONTROL
+    name: Joint position control
+    allocated_to:
+      - SUB-BUS-C0
+      - SUB-BUS-C1
+      - SUB-BUS-C2
+      - SUB-BUS-C3
+      - SUB-BUS-C4
+      - SUB-ELEC-MCB
+      - SUB-SW-CONTROL
+    evidenced_by:
+      - path: electrical/wiring/wiring.yaml
+        states: >-
+          every actuator connector is an XT30(2+2) carrying pinlabels
+          [BATT+, BATT-, CAN_H, CAN_L]
+      - path: electrical/motion_control/mcb-io.dts
+        states: six CAN interfaces enabled, three native and three over SPI
+      - repo: asimovinc/asimov-mjlab
+        path: src/mjlab/asset_zoo/robots/asimov/asimov_constants.py
+        states: >-
+          five BuiltinPositionActuatorCfg entries, each with stiffness, damping,
+          effort_limit and armature
+
+  - id: FN-STATE-ESTIMATION
+    name: State estimation
+    allocated_to: [SUB-ELEC-MCB, SUB-SW-CONTROL]
+    evidenced_by:
+      - path: electrical/README.md
+        states: >-
+          "The LSM6DSV IMU is located at the bottom of the board, with an I2C
+          connector available if an external IMU is required."
+      - path: README.md
+        states: 'Specifications table: "Torso | 1 DOF waist yaw, 10 W 4 ohm speaker, 6 DOF IMU"'
+      - path: README.md
+        states: 'DIY kit table: "Sensors | Monocular camera, IMUs, mic, speaker, motor joint states"'
+      - path: sim-model/xmls/asimov.xml
+        states: five sensors modelling the IMU at site "imu_in_pelvis"
+
+  - id: FN-POWER-MANAGEMENT
+    name: Power management
+    allocated_to: [SUB-BUS-C5, SUB-ELEC-MCB]
+    evidenced_by:
+      - path: electrical/README.md
+        states: '"Power is supplied via a 5V input through an XT30 connector."'
+      - path: electrical/wiring/wiring.yaml
+        states: >-
+          "BMS Power" (XT-60) feeds "BMS Power Sink" (XT-30) over W-20-PWR;
+          "Lower Body PWR", "Left Arm PWR", "Right Arm PWR" and "Neck-Waist PWR"
+          are the four XT-30 power roots
+      - path: README.md
+        states: 'DIY kit table: "power supply & cabling" included, "Battery" not included'
+
+safety_functions:
+
+  - id: SFN-TORQUE-LIMIT
+    name: Torque limiting
+    allocated_to:
+      - SUB-MECH-500
+      - SUB-MECH-600
+      - SUB-BUS-C0
+      - SUB-BUS-C1
+      - SUB-SW-CONTROL
+    evidenced_by:
+      - repo: asimovinc/asimov-mjlab
+        path: src/mjlab/asset_zoo/robots/asimov/asimov_constants.py
+        states: >-
+          "# Effort limits (peak torque from datasheets)" followed by
+          EFFORT_HIP_PITCH 120.0, EFFORT_HIP_ROLL 90.0, EFFORT_HIP_YAW 60.0,
+          EFFORT_KNEE 75.0, EFFORT_ANKLE 36.0, each applied as the actuator
+          effort_limit
+      - repo: asimovinc/asimov-mjlab
+        path: src/mjlab/asset_zoo/robots/asimov/README.md
+        states: >-
+          Motor Specifications table giving peak and rated torque per joint
+    scope: >-
+      The twelve locomotion joints only. asimov-mjlab models the 12-DOF
+      biped, so the thirteen remaining actuated joints of the 25 this
+      repository declares have no effort limit stated anywhere.
+
+  - id: SFN-CAN-LOSS-CUTOFF
+    name: CAN loss-of-communication cutoff
+    allocated_to:
+      - SUB-BUS-C0
+      - SUB-BUS-C1
+      - SUB-BUS-C2
+      - SUB-BUS-C3
+      - SUB-BUS-C4
+      - SUB-ELEC-MCB
+      - SUB-SW-CONTROL
+    evidenced_by: []
+    gap: >-
+      Nothing in this repository or in asimovinc/asimov-mjlab declares a
+      loss-of-communication cutoff, a watchdog, or a timeout after which drive
+      torque is removed. The only safety item the project declares is a
+      "Wireless E-Stop" in the DIY kit table of README.md, which is a manual
+      mechanism and not an automatic one. This function is listed because the
+      architecture identifies it as required, and it is listed with no
+      evidence because inventing a timeout would be worse than showing the
+      hole. No requirement in requirements.yaml states a limit for it.
