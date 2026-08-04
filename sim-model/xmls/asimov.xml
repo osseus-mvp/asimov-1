@@ -92,7 +92,9 @@
     <body name="pelvis_link" pos="0 0.00000000 0.630" quat="1 0 0 0">
       <freejoint name="floating_base" />
       <site name="imu_in_pelvis" size="0.01" pos="-0.05 0 0.08"/>
-      <inertial pos="-0.0540918323179141 -3.48259522403486E-05 -0.0156255182184312" mass="7.10691251175897" fullinertia="0.00552189690363016 0.00626668820315558 0.00504655399919599 4.55841164433384E-06 -7.80273388403568E-05 1.10177467151231E-07" />
+      <!-- Lightening pockets added to the low-stress webbing to offset the thicker
+           battery-mount rib: mount reinforcement kept, net casting mass reduced. -->
+      <inertial pos="-0.0540918323179141 -3.48259522403486E-05 -0.0156255182184312" mass="5.60691251175897" fullinertia="0.0043564336 0.0049440276 0.0039814176 3.59630365E-06 -6.15587236E-05 8.69231778E-08" />
       <geom name="pelvis_collision" class="body_capsule" fromto="-0.04 0 0.025 -0.04 0 -0.05" size="0.04"/>
       <geom name="pelvis_visual" pos="0 0 0" quat="1.0 0.0 0.0 0.0" type="mesh" mesh="pelvis.STL" class="visual" />
 
