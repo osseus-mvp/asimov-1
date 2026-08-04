@@ -11,6 +11,7 @@ mechanical/ASV1/
 │   ├── ASV1_NNN.STEP       Subassembly STEP
 │   └── FABRICATION/
 │       ├── ALU_7075/       CNC-machined aluminium parts
+│       ├── SML_316L/       3D-printed 316L stainless steel parts (SLM)
 │       ├── MJF_PA12/       3D-printed nylon parts (HP MJF)
 │       └── OFF_THE_SHELF/  Standard hardware
 └── NamingConvention.png    Part naming reference
