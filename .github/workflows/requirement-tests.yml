@@ -27,4 +27,18 @@ jobs:
         run: python3 -m pip install --disable-pip-version-check pytest==9.1.1 pyyaml==6.0.3
 
       - name: Run requirement tests
-        run: python3 -m pytest tests/requirements -v
+        # --junitxml writes the per-test record. Without it the only thing a
+        # reader outside this repository can learn from a run is whether the
+        # whole job went green, which reads a skipped test as a passing one.
+        run: python3 -m pytest tests/requirements -v --junitxml=junit.xml
+
+      - name: Upload the test report
+        # always(): a red run's report is the one worth reading. Skipping the
+        # upload on failure would publish per-test detail only for the runs
+        # where every test already passed.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: junit.xml
+          if-no-files-found: error

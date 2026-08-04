@@ -30,7 +30,7 @@
 #   measures     machine-readable pointer to where the actual value lives
 #
 # An entry with no `verifies` has no automated verification anywhere, and that
-# is recorded rather than papered over. Seven entries are in that state and
+# is recorded rather than papered over. Six entries are in that state and
 # each says why in its basis.
 
 requirements:
