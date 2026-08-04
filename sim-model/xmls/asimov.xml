@@ -113,7 +113,7 @@
             <geom name="left_hip_yaw_link_collision" class="body_capsule" fromto="0 0 -0.05 0 0 -0.12" size="0.04"/>
             <geom name="left_hip_yaw_link_visual" pos="0 0 0" quat="1.0 0.0 0.0 0.0" type="mesh" mesh="left_hip_yaw_link.STL" class="visual" />
             <body name="left_knee_link" pos="0 0 -0.195639999999998" quat="1.0 0.0 0.0 0.0">
-              <joint name="left_knee_joint" type="hinge" ref="0.0" class="motor" range="0 1.5" axis="0 1 0" armature="0.0339552" />
+              <joint name="left_knee_joint" type="hinge" ref="0.0" class="motor" range="0 1.4" axis="0 1 0" armature="0.0339552" />
               <inertial pos="-0.000500664455004187 0.000509289489479564 -0.11269288769412" mass="2.39114151033076" fullinertia="0.00962172060189828 0.00975314356560942 0.00233095236940007 9.87646392241852E-06 -0.000645140055016828 -7.94058135611557E-06" />
               <geom name="left_knee_link_collision" class="body_capsule" fromto="0 0 -0.04 0 0 -0.22" size="0.04"/>
               <geom name="left_knee_link_visual" pos="0 0 0" quat="1.0 0.0 0.0 0.0" type="mesh" mesh="left_knee_link.STL" class="visual" />
