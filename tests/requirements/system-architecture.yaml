@@ -14,6 +14,11 @@
 # `evidenced_by` cites artifacts that support a function without naming it.
 # The distinction matters: subsystems are declared by the project, functions
 # are declared by this file and evidenced by the project.
+#
+# One field is neither, and says so where it appears: `harness_root` on each
+# bus domain is a join between two artifacts that never name each other, and
+# it is asserted by a human in this file. See the comment above the bus
+# domains for what was checked before asserting it.
 
 schema_version: 1
 
@@ -155,6 +160,21 @@ subsystems:
   # ports, each named for the part of the robot it serves. The device tree
   # overlay declares the same six interfaces to Linux, three native and three
   # over SPI, which is where the port map becomes machine-checkable.
+  #
+  # `harness_root` is asserted by this file and by nothing else, which is why
+  # it is called out here rather than left to look like a reading of an
+  # artifact. electrical/wiring/wiring.yaml names six CAN bus roots and no
+  # port; electrical/README.md names six ports and no connector. The two lists
+  # are the same length and their names line up — "Left Leg Root SIG" beside
+  # "C0 | Left leg bus" — and that resemblance is precisely why no parser may
+  # join them: matching on the shared word "left" would be reconstructing a
+  # decomposition out of name prefixes, and a harness whose roots were renamed
+  # would silently re-map the robot's CAN buses. So the join is stated once,
+  # here, by a human, and read as a declared fact. It was checked in the
+  # direction that can fail: every root below is a MOLEX KK 254 2 pin
+  # connector carrying pinlabels [CAN_H, CAN_L] in wiring.yaml, there are
+  # exactly six of them, and each is the CAN_H/CAN_L end nearest the board on
+  # its limb's signal chain.
   # -------------------------------------------------------------------------
 
   - id: SUB-BUS-C0
@@ -163,6 +183,7 @@ subsystems:
     port: C0
     parent: SYS-ASV1
     serves: [SUB-MECH-600]
+    harness_root: Left Leg Root SIG
     declared_by:
       - path: electrical/README.md
         states: 'Port Mapping table: "C0 | Left leg bus"'
@@ -177,6 +198,7 @@ subsystems:
     port: C1
     parent: SYS-ASV1
     serves: [SUB-MECH-500]
+    harness_root: Right Leg Root SIG
     declared_by:
       - path: electrical/README.md
         states: 'Port Mapping table: "C1 | Right leg bus"'
@@ -189,6 +211,7 @@ subsystems:
     port: C2
     parent: SYS-ASV1
     serves: [SUB-MECH-300]
+    harness_root: Right Arm Root SIG
     declared_by:
       - path: electrical/README.md
         states: 'Port Mapping table: "C2 | Right arm bus"'
@@ -201,6 +224,7 @@ subsystems:
     port: C3
     parent: SYS-ASV1
     serves: [SUB-MECH-400]
+    harness_root: Left Arm Root SIG
     declared_by:
       - path: electrical/README.md
         states: 'Port Mapping table: "C3 | Left arm bus"'
@@ -215,6 +239,7 @@ subsystems:
     port: C4
     parent: SYS-ASV1
     serves: [SUB-MECH-200, SUB-MECH-700]
+    harness_root: Neck-Waist Root SIG
     declared_by:
       - path: electrical/README.md
         states: 'Port Mapping table: "C4 | Waist-neck bus"'
@@ -235,6 +260,7 @@ subsystems:
     port: C5
     parent: SYS-ASV1
     serves: []
+    harness_root: BMS Root SIG
     declared_by:
       - path: electrical/README.md
         states: 'Port Mapping table: "C5 | BMS bus"'
