@@ -67,7 +67,8 @@ requirements:
   - id: REQ-L0-HEIGHT
     level: L0
     statement: >-
-      The standing height of the robot must not exceed 1.2 m.
+      The standing height of the robot must not exceed 1.2 m, which bounds its
+      shipping and workspace envelope.
     limit: 1.2
     unit: m
     comparator: at_most
@@ -84,7 +85,8 @@ requirements:
   - id: REQ-L0-DOF
     level: L0
     statement: >-
-      The robot must provide at least 25 actuated degrees of freedom.
+      The robot must provide at least 25 actuated degrees of freedom, each one
+      a powered rotation about a single axis.
     limit: 25
     unit: actuated joints
     comparator: at_least
@@ -103,7 +105,7 @@ requirements:
   - id: REQ-L0-KIT-COST
     level: L0
     statement: >-
-      The DIY kit must reach customers at a price no higher than 15000 USD.
+      The DIY kit must reach customers at a cost no higher than 15000 USD.
     limit: 15000
     unit: USD
     comparator: at_most
@@ -120,7 +122,7 @@ requirements:
   - id: REQ-L0-PAYLOAD-CURL
     level: L0
     statement: >-
-      Each arm must lift at least 15 kg in a bicep curl.
+      Each arm must lift a payload of at least 15 kg in a bicep curl.
     limit: 15
     unit: kg
     comparator: at_least
@@ -167,7 +169,8 @@ requirements:
     level: L1
     parent: REQ-L0-DOF
     statement: >-
-      The simulation model must declare exactly 25 actuated joints.
+      The simulation model must declare exactly 25 actuated joints, one
+      powered rotation each.
     limit: 25
     unit: actuated joints
     comparator: equals
@@ -190,7 +193,7 @@ requirements:
     parent: REQ-L0-DOF
     statement: >-
       The simulation model must declare exactly 2 passive toe joints, which
-      are not actuated and must not appear in the wiring harness.
+      take no torque command and must not appear in the wiring harness.
     limit: 2
     unit: passive joints
     comparator: equals
