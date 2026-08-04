@@ -27,11 +27,28 @@
 #   parent       the requirement this one decomposes, when there is one
 #   allocated_to subsystem and function ids from system-architecture.yaml
 #   verifies     test node ids; repo-qualified when the test is not in this repo
-#   measures     machine-readable pointer to where the actual value lives
+#   measures     machine-readable pointer to where the actual value lives, in
+#                the source artifact
+#   constrains   the rolled-up number this entry's limit bounds, written
+#                <subject>@<property>:<aggregation> — see below
 #
 # An entry with no `verifies` has no automated verification anywhere, and that
 # is recorded rather than papered over. Six entries are in that state and
 # each says why in its basis.
+#
+# `measures` and `constrains` are different fields and neither substitutes for
+# the other. `measures` says where in the source a human reads the number:
+# a path, an XPath-ish expression, a constant name. `constrains` says which
+# rolled-up number the limit is compared against, and it is written in three
+# parts — the subject that owns the roll-up, the physical property, and the
+# aggregation:
+#
+#   constrains: 'sim-model/xmls/asimov.xml@mass:sum'
+#
+# The subject is an id an artifact in this repository declares: a repo-relative
+# path for a file (a simulation model), or a subsystem id from
+# system-architecture.yaml. Only one entry carries this today, and that is the
+# honest state rather than an omission — see the note on REQ-L0-MASS.
 
 requirements:
 
@@ -52,6 +69,7 @@ requirements:
     comparator: at_most
     allocated_to: [SYS-ASV1]
     measures: 'sim-model/xmls/asimov.xml#sum(/mujoco//body/inertial/@mass)'
+    constrains: 'sim-model/xmls/asimov.xml@mass:sum'
     measured_source: >-
       sim-model/xmls/asimov.xml: sum over every body/inertial/@mass element.
       28 bodies, every one declares a mass; measured total 32.37127688334273 kg.
@@ -61,6 +79,16 @@ requirements:
       does not model — wiring harness, battery, and the off-the-shelf fasteners
       in the fabrication manifest — so the 2.6 kg of headroom is not slack, it
       is unmodelled mass.
+
+      `constrains` names the simulation model and not SYS-ASV1, which is what
+      this entry is allocated to, and the difference is the point. Allocation
+      says which part of the machine owns the promise; `constrains` says which
+      number the limit is compared against. The only artifact in this
+      repository that states a mass is the MJCF: the fabrication manifest
+      enumerates 170 parts and gives none of them a weight, so a roll-up over
+      the mechanical tree sums nothing. Reading the model's total as the
+      system's would need a statement that every body belongs to some
+      subassembly, and no artifact here makes one.
     verifies:
       - 'tests/requirements/test_sim_model.py::test_total_link_mass_is_within_the_l0_budget'
 
