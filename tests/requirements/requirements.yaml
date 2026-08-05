@@ -47,8 +47,38 @@
 #
 # The subject is an id an artifact in this repository declares: a repo-relative
 # path for a file (a simulation model), or a subsystem id from
-# system-architecture.yaml. Only one entry carries this today, and that is the
-# honest state rather than an omission — see the note on REQ-L0-MASS.
+# system-architecture.yaml.
+#
+# Two entries carry `constrains` today — REQ-L0-MASS (the mass sum) and
+# REQ-L1-LINK-INERTIALS (the count of stated masses) — and the other 34 carry
+# none. That is the honest state rather than an omission, and it is worth
+# writing down why, because it is four different reasons:
+#
+#   * 14 entries bound a number in asimovinc/asimov-mjlab — the five effort
+#     limits, damping, stiffness, reflected inertia, actuator coverage,
+#     control channels, the torque-limited joint count and the three motor
+#     peak torques. Each is real and cited, and each lives in a Python module,
+#     a compiled model or a README table rather than in data. Their `verifies`
+#     tests are what checks them, and those tests run in that fork.
+#   * 10 entries bound a count over an artifact this repository does publish —
+#     the model's joints, the harness's cables and connectors, the manifest's
+#     entries, subassemblies and classes. The artifacts state the parts; the
+#     rule for which of them count is stated *here*: "named hinge joints
+#     excluding toe", "cables matching W-<ID>-<PWR|SIG>", "connectors carrying
+#     BATT+, BATT-, CAN_H and CAN_L". A reader that implemented those rules
+#     would be interpreting this file, so it does not, and these entries wait
+#     for the artifact to publish the count itself.
+#   * 6 entries — REQ-L0-HEIGHT, REQ-L0-KIT-COST, REQ-L0-PAYLOAD-CURL,
+#     REQ-L1-CAN-BITRATE, REQ-L3-CM5-AVAILABILITY, REQ-L3-IMU-TEMPERATURE-MIN
+#     — say in their own basis that no artifact anywhere holds the actual.
+#     They are written down so the gap is visible, and they will not gain one.
+#   * 4 entries bound a count in electrical/motion_control/mcb-io.dts, which
+#     nothing reads: REQ-L1-CAN-DOMAINS, REQ-L2-NATIVE-CAN-PORTS,
+#     REQ-L2-SPI-CAN-BRIDGES and REQ-L3-CM5-CAN-CONTROLLERS.
+#
+# An entry gains `constrains` when its number arrives, not before. A
+# declaration whose subject or budget does not exist reads downstream as a
+# requirement with no number, which looks like a defect rather than a gap.
 
 requirements:
 
@@ -244,10 +274,11 @@ requirements:
       inertial mass, so that the mass total is a sum over the whole robot
       rather than over the subset that happens to be annotated.
     limit: 28
-    unit: bodies declaring a mass
+    unit: count
     comparator: equals
     allocated_to: [SYS-ASV1]
     measures: 'sim-model/xmls/asimov.xml#count(/mujoco//body/inertial[@mass])'
+    constrains: 'sim-model/xmls/asimov.xml@mass:count'
     measured_source: >-
       sim-model/xmls/asimov.xml: 28 body elements, 28 inertial elements
       carrying a @mass attribute.
@@ -257,6 +288,20 @@ requirements:
       REQ-L0-MASS being a whole-robot number, and it is stated separately
       because a link losing its inertial block would silently lower the mass
       total instead of failing.
+
+      `constrains` names the same simulation model REQ-L0-MASS does and the
+      same `mass` property, and asks a different question of it: not what the
+      masses add up to, but how many of them were stated. That is exactly this
+      requirement, and it is why the two entries can share one subject without
+      either restating the other.
+
+      The unit is `count` rather than the prose this entry used to carry
+      ("bodies declaring a mass"), because the two are not the same kind of
+      statement. The quantity is a count; *what* is being counted is the
+      statement above and the `constrains` reference below it, and putting it
+      in the unit field meant the entry could never be compared against
+      anything — a count is published in counts, so the comparison was refused
+      on a unit mismatch rather than answered.
     verifies:
       - 'tests/requirements/test_sim_model.py::test_every_link_declares_a_mass'
 
