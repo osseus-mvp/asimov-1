@@ -45,21 +45,41 @@
 #
 #   constrains: 'sim-model/xmls/asimov.xml@mass:sum'
 #
-# The subject is an id an artifact in this repository declares: a repo-relative
-# path for a file (a simulation model), or a subsystem id from
-# system-architecture.yaml.
+# The subject is an id an artifact declares: a repo-relative path for a file (a
+# simulation model, an actuator declaration), a subsystem id from
+# system-architecture.yaml, or one actuator of a declared set, written
+# `<declaration path>::<actuator id>`. A subject in a sibling repository is
+# prefixed with the same bare name `verifies` uses — `asimov-mjlab:` — and the
+# connection declares what that points at. A bare name is never resolved to an
+# owner here: two forks of one project hold the same ids.
 #
-# Two entries carry `constrains` today — REQ-L0-MASS (the mass sum) and
-# REQ-L1-LINK-INERTIALS (the count of stated masses) — and the other 34 carry
-# none. That is the honest state rather than an omission, and it is worth
-# writing down why, because it is four different reasons:
+# Eight entries carry `constrains` today — REQ-L0-MASS (the mass sum),
+# REQ-L1-LINK-INERTIALS (the count of stated masses), the five REQ-L2-EFFORT-*
+# and REQ-L2-DAMPING-CEILING — and the other 28 carry none. That is the honest
+# state rather than an omission, and it is worth writing down why, because it
+# is four different reasons:
 #
-#   * 14 entries bound a number in asimovinc/asimov-mjlab — the five effort
-#     limits, damping, stiffness, reflected inertia, actuator coverage,
-#     control channels, the torque-limited joint count and the three motor
-#     peak torques. Each is real and cited, and each lives in a Python module,
-#     a compiled model or a README table rather than in data. Their `verifies`
-#     tests are what checks them, and those tests run in that fork.
+#   * 8 entries bound a number in asimov-mjlab that no reader can get without
+#     running that package. `REQ-L2-STIFFNESS-FORMULA` and
+#     `REQ-L2-REFLECTED-INERTIA` bound the result of a calculation — a product
+#     of two constants, and a percentage deviation from a rotor inertia stated
+#     only in a prose table — so a reader would be performing the arithmetic
+#     and reporting its own answer as a measurement.
+#     `REQ-L1-TORQUE-LIMITED`, `REQ-L2-ACTUATOR-COVERAGE` and
+#     `REQ-L2-CONTROL-CHANNELS` bound counts that only exist once the model is
+#     compiled: the last of these is exactly the trap, because the *file*
+#     ships 12 actuators and the *compiled* model has 24 of which 12 are force
+#     limited, so a reader of the XML would confidently report the wrong
+#     number. The three REQ-L3-MOTOR-*-PEAK bound a vendor rating this
+#     repository holds only as a row in a README table, and that table is
+#     demonstrably unreliable — its damping column states 5.0 for every joint
+#     while DAMPING_KNEE is 6.0 and the fork's own CI fails on it.
+#
+#     The other six of the fourteen now carry a declaration. asimov-mjlab
+#     publishes `actuator_parameters.yaml`, which names the constants and
+#     states their units and joints without restating a single number, so the
+#     effort limits and the damping gains are read from asimov_constants.py
+#     itself.
 #   * 10 entries bound a count over an artifact this repository does publish —
 #     the model's joints, the harness's cables and connectors, the manifest's
 #     entries, subassemblies and classes. The artifacts state the parts; the
@@ -485,6 +505,7 @@ requirements:
     comparator: at_most
     allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-LOCOMOTION]
     measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_HIP_PITCH'
+    constrains: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/actuator_parameters.yaml::hip-pitch@power:max'
     measured_source: >-
       asimov-mjlab, asimov_constants.py constant EFFORT_HIP_PITCH (measured
       value 120.0), applied as the effort_limit of ASIMOV_ACTUATOR_HIP_PITCH
@@ -509,6 +530,7 @@ requirements:
     comparator: at_most
     allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-BALANCE]
     measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_HIP_ROLL'
+    constrains: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/actuator_parameters.yaml::hip-roll@power:max'
     measured_source: >-
       asimov-mjlab, asimov_constants.py constant EFFORT_HIP_ROLL (measured
       value 90.0), applied as the effort_limit of ASIMOV_ACTUATOR_HIP_ROLL.
@@ -529,6 +551,7 @@ requirements:
     comparator: at_most
     allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-LOCOMOTION]
     measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_HIP_YAW'
+    constrains: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/actuator_parameters.yaml::hip-yaw@power:max'
     measured_source: >-
       asimov-mjlab, asimov_constants.py constant EFFORT_HIP_YAW (measured
       value 60.0), applied as the effort_limit of ASIMOV_ACTUATOR_HIP_YAW.
@@ -549,6 +572,7 @@ requirements:
     comparator: at_most
     allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-LOCOMOTION]
     measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_KNEE'
+    constrains: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/actuator_parameters.yaml::knee@power:max'
     measured_source: >-
       asimov-mjlab, asimov_constants.py constant EFFORT_KNEE (measured value
       75.0), applied as the effort_limit of ASIMOV_ACTUATOR_KNEE.
@@ -570,6 +594,7 @@ requirements:
     comparator: at_most
     allocated_to: [SFN-TORQUE-LIMIT, SUB-MECH-500, SUB-MECH-600, FN-BALANCE]
     measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#EFFORT_ANKLE'
+    constrains: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/actuator_parameters.yaml::ankle@power:max'
     measured_source: >-
       asimov-mjlab, asimov_constants.py constant EFFORT_ANKLE (measured value
       36.0), applied as the effort_limit of ASIMOV_ACTUATOR_ANKLE, whose
@@ -593,6 +618,7 @@ requirements:
     comparator: at_most
     allocated_to: [SFN-TORQUE-LIMIT, SUB-SW-CONTROL, FN-JOINT-POSITION-CONTROL]
     measures: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/asimov_constants.py#DAMPING_HIP_PITCH,DAMPING_HIP_ROLL,DAMPING_HIP_YAW,DAMPING_KNEE,DAMPING_ANKLE'
+    constrains: 'asimov-mjlab:src/mjlab/asset_zoo/robots/asimov/actuator_parameters.yaml@stiffness:max'
     measured_source: >-
       asimov-mjlab, asimov_constants.py constants DAMPING_HIP_PITCH,
       DAMPING_HIP_ROLL, DAMPING_HIP_YAW, DAMPING_KNEE and DAMPING_ANKLE

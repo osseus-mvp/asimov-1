@@ -130,18 +130,32 @@ def test_every_constrains_entry_names_something_this_repository_has(
     """`constrains` resolves against a real file or a declared subsystem.
 
     The field says which rolled-up number a limit is compared against, written
-    `<subject>@<property>:<aggregation>`. Its whole value is that the subject
-    is a thing this repository publishes, so a subject naming a file that does
-    not exist, or a subsystem the architecture never declares, would read
+    `[<repo>:]<subject>@<property>:<aggregation>`. Its whole value is that the
+    subject is a thing somebody publishes, so a subject naming a file that
+    does not exist, or a subsystem the architecture never declares, would read
     downstream as a requirement with no number rather than as a typo here —
     and the fix would be in a different repository from the symptom. Same rule
     as `test_every_allocation_names_a_declared_subsystem_or_function`: this
     repository fails first, on a diff.
+
+    A subject in a sibling repository is repo-qualified and its existence is
+    not asserted here, for the reason `verifies` entries are skipped: that
+    fork publishes it and runs its own suite, and reaching across would make
+    this suite unrunnable rather than honest. The shape is still checked, and
+    so is the one thing this repository can know — that a qualified subject
+    names a repository the register uses elsewhere.
     """
     subsystems = {subsystem["id"] for subsystem in architecture["subsystems"]}
     functions = {function["id"] for function in architecture["functions"]}
     safety = {function["id"] for function in architecture["safety_functions"]}
     declared = {architecture["system"]["id"]} | subsystems | functions | safety
+
+    named_repos = {
+        node_id.split(":", 1)[0]
+        for entry in register["requirements"]
+        for node_id in entry.get("verifies") or ()
+        if ":" in node_id.split("::")[0]
+    }
 
     for entry in register["requirements"]:
         stated = entry.get("constrains")
@@ -151,12 +165,20 @@ def test_every_constrains_entry_names_something_this_repository_has(
         subject, separator, budget = str(stated).rpartition("@")
         assert separator and subject, (
             f"{identifier} states constrains {stated!r};"
-            " the shape is subject@property:aggregation"
+            " the shape is [repo:]subject@property:aggregation"
         )
         prop, separator, aggregation = budget.partition(":")
         assert separator and prop and aggregation, (
             f"{identifier} states budget {budget!r}, which is not property:aggregation"
         )
+        if ":" in subject:
+            repo, _, remainder = subject.partition(":")
+            assert repo in named_repos, (
+                f"{identifier} constrains a subject in {repo!r}, which this register"
+                f" names nowhere else; the known siblings are {sorted(named_repos)}"
+            )
+            assert remainder, f"{identifier} constrains {stated!r} with an empty subject"
+            continue
         if subject in declared:
             continue
         assert (REPO_ROOT / subject).is_file(), (
