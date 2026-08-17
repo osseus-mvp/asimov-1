@@ -43,7 +43,7 @@
 # parts — the subject that owns the roll-up, the physical property, and the
 # aggregation:
 #
-#   constrains: 'sim-model/xmls/asimov.xml@mass:sum'
+#   constrains: 'sim-model/xmls/asimov_1.xml@mass:sum'
 #
 # The subject is an id an artifact declares: a repo-relative path for a file (a
 # simulation model, an actuator declaration), a subsystem id from
@@ -83,8 +83,8 @@
 #   * 10 entries bound a count over an artifact this repository does publish —
 #     the model's joints, the harness's cables and connectors, the manifest's
 #     entries, subassemblies and classes. The artifacts state the parts; the
-#     rule for which of them count is stated *here*: "named hinge joints
-#     excluding toe", "cables matching W-<ID>-<PWR|SIG>", "connectors carrying
+#     rule for which of them count is stated *here*: "named hinge joints",
+#     "cables matching W-<ID>-<PWR|SIG>", "connectors carrying
 #     BATT+, BATT-, CAN_H and CAN_L". A reader that implemented those rules
 #     would be interpreting this file, so it does not, and these entries wait
 #     for the artifact to publish the count itself.
@@ -118,17 +118,22 @@ requirements:
     unit: kg
     comparator: at_most
     allocated_to: [SYS-ASV1]
-    measures: 'sim-model/xmls/asimov.xml#sum(/mujoco//body/inertial/@mass)'
-    constrains: 'sim-model/xmls/asimov.xml@mass:sum'
+    measures: 'sim-model/xmls/asimov_1.xml#sum(/mujoco//body/inertial/@mass)'
+    constrains: 'sim-model/xmls/asimov_1.xml@mass:sum'
     measured_source: >-
-      sim-model/xmls/asimov.xml: sum over every body/inertial/@mass element.
-      28 bodies, every one declares a mass; measured total 32.37127688334273 kg.
+      sim-model/xmls/asimov_1.xml: sum over every body/inertial/@mass element.
+      26 bodies, every one declares a mass; measured total 32.22491296549718 kg.
     basis: >-
       README.md Specifications table states "Weight | 35 kg". The measured
       total is the simulation model's link mass and excludes anything the MJCF
       does not model — wiring harness, battery, and the off-the-shelf fasteners
-      in the fabrication manifest — so the 2.6 kg of headroom is not slack, it
+      in the fabrication manifest — so the 2.775 kg of headroom is not slack, it
       is unmodelled mass.
+
+      The total fell from 32.37127688334273 kg when upstream rebuilt the foot:
+      the two toe links (0.112 kg each) left the model and the ankle roll links
+      were re-derived from 0.405640437504617 kg to a flat 0.44468 kg each. The
+      budget did not move; what it is measured against did.
 
       `constrains` names the simulation model and not SYS-ASV1, which is what
       this entry is allocated to, and the difference is the point. Allocation
@@ -169,16 +174,28 @@ requirements:
     unit: actuated joints
     comparator: at_least
     allocated_to: [SYS-ASV1, FN-LOCOMOTION, FN-MANIPULATION]
-    measures: 'sim-model/xmls/asimov.xml#count(/mujoco//joint[@name][not(contains(@name,"toe"))])'
+    measures: 'electrical/wiring/wiring.yaml#count(/connectors[type="XT30(2+2)"])'
     measured_source: >-
-      sim-model/xmls/asimov.xml: 27 named hinge joints, of which the two toe
-      joints are passive, leaving 25 actuated.
+      electrical/wiring/wiring.yaml: 25 connectors of type "XT30(2+2)", one
+      landed on each actuator — 6 per leg, 5 per arm, 2 neck, 1 waist yaw.
     basis: >-
       README.md Specifications table states "Degrees of Freedom | 25 actuated
-      + 2 passive" and "Legs | 6 DOF x 2 + toe x 2". sim-model/README.md
-      independently states "25 actuated joints". The two agree.
+      + 2 passive".
+
+      The measurement moved off the simulation model when upstream rebuilt it.
+      sim-model/xmls/asimov_1.xml now declares 23 hinge joints: the two neck
+      joints are `fixed` in sim-model/urdf/asimov_1.urdf and carry no joint
+      element in the MJCF at all, and the two toe joints were deleted with the
+      old foot. Counting the model would report 23 and read as the robot
+      having lost two degrees of freedom it still has.
+
+      The harness is the artifact that enumerates the robot's actuators rather
+      than the subset a locomotion model chooses to drive: it lands one
+      XT30(2+2) on every motor, both neck motors included.
+      REQ-L1-ACTUATED-JOINTS holds the model to its own 23 and is where the
+      simulation's rigid head is recorded.
     verifies:
-      - 'tests/requirements/test_sim_model.py::test_model_declares_25_actuated_and_2_passive_joints'
+      - 'tests/requirements/test_wiring.py::test_every_actuated_joint_has_a_power_and_can_drop'
 
   - id: REQ-L0-KIT-COST
     level: L0
@@ -247,67 +264,86 @@ requirements:
     level: L1
     parent: REQ-L0-DOF
     statement: >-
-      The simulation model must declare exactly 25 actuated joints, one
+      The simulation model must declare exactly 23 actuated joints, one
       powered rotation each.
-    limit: 25
+    limit: 23
     unit: actuated joints
     comparator: equals
     allocated_to: [SYS-ASV1, FN-LOCOMOTION, FN-MANIPULATION, FN-JOINT-POSITION-CONTROL]
-    measures: 'sim-model/xmls/asimov.xml#count(/mujoco//joint[@name][not(contains(@name,"toe"))])'
+    measures: 'sim-model/xmls/asimov_1.xml#count(/mujoco//joint[@name])'
     measured_source: >-
-      sim-model/xmls/asimov.xml: 12 leg joints (6 per leg), 10 arm joints
-      (5 per arm), 1 waist yaw, 2 neck joints.
+      sim-model/xmls/asimov_1.xml: 12 leg joints (6 per leg), 10 arm joints
+      (5 per arm), 1 waist yaw. 23 named hinge joints beside the floating base.
     basis: >-
-      sim-model/README.md states "25 actuated joints"; README.md's breakdown
-      by region sums to the same 25. Stated as `equals` rather than `at_least`
-      because the model is the reference for the harness and the bus map, and
-      a 26th joint appearing there without a connector is the failure this
-      requirement exists to catch.
-    verifies:
-      - 'tests/requirements/test_sim_model.py::test_model_declares_25_actuated_and_2_passive_joints'
+      sim-model/README.md states "Floating base with 23 hinge joints".
 
-  - id: REQ-L1-PASSIVE-TOE-JOINTS
-    level: L1
-    parent: REQ-L0-DOF
-    statement: >-
-      The simulation model must declare exactly 2 passive toe joints, which
-      take no torque command and must not appear in the wiring harness.
-    limit: 2
-    unit: passive joints
-    comparator: equals
-    allocated_to: [SYS-ASV1, FN-LOCOMOTION]
-    measures: 'sim-model/xmls/asimov.xml#count(/mujoco//joint[contains(@name,"toe")])'
-    measured_source: >-
-      sim-model/xmls/asimov.xml: joints `left_toe_joint` and `right_toe_joint`.
-    basis: >-
-      README.md states "25 actuated + 2 passive" and "Legs | 6 DOF x 2 + toe
-      x 2". The wiring harness carries no toe connector, which is the
-      cross-check that they are passive rather than merely unlisted.
+      This entry read 25 until upstream rebuilt the model, and the gap to its
+      parent's 25 is the whole point of stating it separately. Two joints the
+      robot has are not actuated here: neck yaw and neck pitch are `fixed`
+      joints in sim-model/urdf/asimov_1.urdf, so the MJCF nests both neck
+      bodies rigidly and declares no joint element for either. The head is
+      instrumented and wired on the robot and rigid in simulation.
+
+      The two passive toe joints that used to bring the named count to 27 are
+      gone with the old foot: upstream replaced the per-strip foot capsules
+      with contact spheres and deleted both toe links, which is also why
+      REQ-L1-PASSIVE-TOE-JOINTS no longer appears in this register.
+
+      Still `equals` rather than `at_least`, and for the original reason: the
+      model is the reference for the harness and the bus map, so a 24th joint
+      appearing here without a connector is the failure this entry catches.
     verifies:
-      - 'tests/requirements/test_sim_model.py::test_model_declares_25_actuated_and_2_passive_joints'
+      - 'tests/requirements/test_sim_model.py::test_model_declares_the_actuated_joint_count'
+
+  # REQ-L1-PASSIVE-TOE-JOINTS was removed when upstream rebuilt the foot.
+  #
+  # It required the model to declare exactly 2 passive toe joints. Upstream's
+  # sim-model rebuild replaced the per-strip foot capsules with four contact
+  # spheres per foot and deleted `left_toe_link` and `right_toe_link` outright,
+  # along with their joints and their meshes. The requirement is not failing,
+  # it has no subject: there is no toe in the design for it to be about.
+  #
+  # This is a deletion by supersession rather than by dropping an uncomfortable
+  # row, which is the distinction test_register.py's
+  # test_unverified_requirements_stay_declared_rather_than_disappearing exists
+  # to police. README.md still states "Legs | 6 DOF x 2 + toe x 2", so the
+  # root README and the simulation model now disagree about whether the robot
+  # has toes at all. That disagreement is real and unresolved upstream; this
+  # register records it here rather than carrying a requirement whose measured
+  # value can only ever be 0.
 
   - id: REQ-L1-LINK-INERTIALS
     level: L1
     parent: REQ-L0-MASS
     statement: >-
-      Every one of the 28 link bodies in the simulation model must declare an
+      Every one of the 26 link bodies in the simulation model must declare an
       inertial mass, so that the mass total is a sum over the whole robot
       rather than over the subset that happens to be annotated.
-    limit: 28
+    limit: 26
     unit: count
     comparator: equals
     allocated_to: [SYS-ASV1]
-    measures: 'sim-model/xmls/asimov.xml#count(/mujoco//body/inertial[@mass])'
-    constrains: 'sim-model/xmls/asimov.xml@mass:count'
+    measures: 'sim-model/xmls/asimov_1.xml#count(/mujoco//body/inertial[@mass])'
+    constrains: 'sim-model/xmls/asimov_1.xml@mass:count'
     measured_source: >-
-      sim-model/xmls/asimov.xml: 28 body elements, 28 inertial elements
+      sim-model/xmls/asimov_1.xml: 26 body elements, 26 inertial elements
       carrying a @mass attribute.
     basis: >-
-      sim-model/README.md states "28 link meshes"; the model declares 28 mesh
-      assets and 28 bodies. This requirement is the precondition for
-      REQ-L0-MASS being a whole-robot number, and it is stated separately
-      because a link losing its inertial block would silently lower the mass
-      total instead of failing.
+      sim-model/README.md states "25 STL link meshes"; the model declares 25
+      mesh assets across 26 bodies, because `ANKLE_B_NEW.STL` is referenced by
+      both `left_ankle_roll_link` and `right_ankle_roll_link`. The body count,
+      not the mesh count, is what this requirement is about. This is the
+      precondition for REQ-L0-MASS being a whole-robot number, and it is stated
+      separately because a link losing its inertial block would silently lower
+      the mass total instead of failing.
+
+      The limit read 28 until upstream deleted `left_toe_link` and
+      `right_toe_link` with the old foot. Two links leaving the design is not
+      the failure this entry guards — that is a link losing its `inertial`
+      block while staying in the tree — so the limit follows the design down to
+      26 rather than reporting a deliberate deletion as a defect. The
+      distinction matters because the two are indistinguishable in the mass
+      total and opposite in meaning.
 
       `constrains` names the same simulation model REQ-L0-MASS does and the
       same `mass` property, and asks a different question of it: not what the
@@ -783,10 +819,19 @@ requirements:
       5 per arm, 2 neck, 1 waist yaw. The remaining 15 are bus roots and power
       roots.
     basis: >-
-      Values stated by the harness. The count matching REQ-L1-ACTUATED-JOINTS
-      exactly is the cross-artifact check this requirement exists for: a joint
-      added to the simulation model without a connector, or a connector
-      without a joint, breaks the equality.
+      Values stated by the harness, and the cross-artifact check this entry
+      exists for: a joint added to the simulation model without a connector, or
+      a connector without a joint, breaks the equality.
+
+      The equality is no longer one-to-one against the model, and the offset is
+      named rather than absorbed. The harness lands 25 drops; the model declares
+      23 actuated joints (REQ-L1-ACTUATED-JOINTS); the difference is exactly the
+      two neck motors, which are wired on the robot and `fixed` in
+      sim-model/urdf/asimov_1.urdf. The verifying test asserts
+      `drops == actuated + 2` with that 2 named as the rigidly-modelled neck,
+      so a 24th model joint or a 26th connector still fails. Were the offset
+      left implicit the test would have to compare 25 against 23 and fail
+      permanently, which reports a modelling choice as a wiring defect.
     verifies:
       - 'tests/requirements/test_wiring.py::test_every_actuated_joint_has_a_power_and_can_drop'
 

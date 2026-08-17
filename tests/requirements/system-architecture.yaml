@@ -429,14 +429,14 @@ functions:
           and hardware-in-the-loop testing."
       - path: README.md
         states: 'Roadmap table row "Locomotion policy", marked planned'
-      - path: sim-model/xmls/asimov.xml
+      - path: sim-model/xmls/asimov_1.xml
         states: twelve leg joints, six per leg, plus one passive toe joint per foot
 
   - id: FN-BALANCE
     name: Balance
     allocated_to: [SUB-MECH-500, SUB-MECH-600, SUB-ELEC-MCB, SUB-SW-CONTROL]
     evidenced_by:
-      - path: sim-model/xmls/asimov.xml
+      - path: sim-model/xmls/asimov_1.xml
         states: >-
           sensor block declares subtreeangmom "root_angmom" on body
           "pelvis_link", and gyro, velocimeter, accelerometer and framequat on
@@ -456,7 +456,7 @@ functions:
           elbow, wrist yaw)"
       - path: README.md
         states: 'Activity table rows "Bicep curl | 15 kg each arm" and "Lateral raise | 18 kg each arm"'
-      - path: sim-model/xmls/asimov.xml
+      - path: sim-model/xmls/asimov_1.xml
         states: ten arm joints, five per arm
     gap: >-
       The naming convention declares Right Hand (350) and Left Hand (450) and
@@ -498,7 +498,7 @@ functions:
         states: 'Specifications table: "Torso | 1 DOF waist yaw, 10 W 4 ohm speaker, 6 DOF IMU"'
       - path: README.md
         states: 'DIY kit table: "Sensors | Monocular camera, IMUs, mic, speaker, motor joint states"'
-      - path: sim-model/xmls/asimov.xml
+      - path: sim-model/xmls/asimov_1.xml
         states: five sensors modelling the IMU at site "imu_in_pelvis"
 
   - id: FN-POWER-MANAGEMENT

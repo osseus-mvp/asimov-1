@@ -5,7 +5,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ElementTree
 from typing import Any
 
-from conftest import actuated_joints, named_joints, passive_joints, requirement
+from conftest import actuated_joints, named_joints, requirement
 
 
 def _link_masses(model: ElementTree.Element) -> list[float]:
@@ -60,36 +60,35 @@ def test_every_link_declares_a_mass(
     assert all(mass > 0 for mass in masses), "a link declares a non-positive mass"
 
 
-def test_model_declares_25_actuated_and_2_passive_joints(
+def test_model_declares_the_actuated_joint_count(
     sim_model: ElementTree.Element, register: dict[str, Any]
 ) -> None:
-    """REQ-L0-DOF, REQ-L1-ACTUATED-JOINTS, REQ-L1-PASSIVE-TOE-JOINTS.
+    """REQ-L1-ACTUATED-JOINTS: the model declares 23 powered rotations.
 
-    The passive count is asserted alongside the actuated one because the two
-    are read from the same list and only their sum is stated in README.md. A
-    toe joint quietly becoming actuated would keep the total at 27 while
-    changing what the harness has to reach.
+    The model actuates 23 of the robot's 25 joints. The two neck joints are
+    declared `fixed` in sim-model/urdf/asimov_1.urdf and carry no joint
+    element in the MJCF at all, so the head is rigid in simulation while the
+    harness still lands a connector on each of its two motors. REQ-L0-DOF is
+    the entry that continues to hold the robot to 25, and it is measured from
+    the harness rather than from this model for exactly that reason.
+
+    The two passive toe joints this test used to count are gone: upstream
+    replaced the foot with contact spheres and deleted both toe links, so
+    every named joint in the model is now an actuated one.
     """
-    stakeholder = requirement(register, "REQ-L0-DOF")
     system = requirement(register, "REQ-L1-ACTUATED-JOINTS")
-    passive = requirement(register, "REQ-L1-PASSIVE-TOE-JOINTS")
 
     actuated = actuated_joints(sim_model)
-    toes = passive_joints(sim_model)
 
-    assert len(actuated) >= stakeholder["limit"], (
-        f"the model declares {len(actuated)} actuated joints, REQ-L0-DOF requires at"
-        f" least {stakeholder['limit']}"
-    )
     assert len(actuated) == system["limit"], (
         f"the model declares {len(actuated)} actuated joints, REQ-L1-ACTUATED-JOINTS"
         f" requires exactly {system['limit']}"
     )
-    assert len(toes) == passive["limit"], (
-        f"the model declares {len(toes)} passive toe joints,"
-        f" REQ-L1-PASSIVE-TOE-JOINTS requires exactly {passive['limit']}"
+    assert len(named_joints(sim_model)) == len(actuated), (
+        f"the model declares {len(named_joints(sim_model))} named joints but"
+        f" {len(actuated)} actuated ones; a passive joint has appeared without a"
+        " requirement describing it"
     )
-    assert len(named_joints(sim_model)) == len(actuated) + len(toes)
 
     unbounded = [
         joint.get("name")

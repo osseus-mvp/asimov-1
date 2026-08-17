@@ -26,7 +26,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST_PATH = REPO_ROOT / "mechanical" / "FABRICATION_MANIFEST.json"
 WIRING_PATH = REPO_ROOT / "electrical" / "wiring" / "wiring.yaml"
 DEVICE_TREE_PATH = REPO_ROOT / "electrical" / "motion_control" / "mcb-io.dts"
-SIM_MODEL_PATH = REPO_ROOT / "sim-model" / "xmls" / "asimov.xml"
+SIM_MODEL_PATH = REPO_ROOT / "sim-model" / "xmls" / "asimov_1.xml"
 REGISTER_PATH = REPO_ROOT / "tests" / "requirements" / "requirements.yaml"
 ARCHITECTURE_PATH = REPO_ROOT / "tests" / "requirements" / "system-architecture.yaml"
 

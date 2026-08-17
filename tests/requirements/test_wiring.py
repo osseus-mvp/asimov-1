@@ -26,6 +26,14 @@ GAUGE_BY_TYPE = {"PWR": "17 AWG", "SIG": "26 AWG"}
 #: Conductor pair per bundle: BATT+/BATT- on power, CAN_H/CAN_L on signal.
 CONDUCTORS_PER_CABLE = 2
 
+#: Joints the robot actuates and the simulation model does not. Neck yaw and
+#: neck pitch are `fixed` joints in sim-model/urdf/asimov_1.urdf, so the MJCF
+#: nests both neck bodies rigidly and declares no joint element for either —
+#: but both motors are real, and the harness lands a drop on each. Named as a
+#: constant so that the harness/model comparison below stays an equality: an
+#: unexplained 24th joint or 26th connector still fails.
+RIGIDLY_MODELLED_JOINTS = 2
+
 
 def test_every_actuated_joint_has_a_power_and_can_drop(
     wiring: dict[str, Any],
@@ -61,9 +69,11 @@ def test_every_actuated_joint_has_a_power_and_can_drop(
     )
 
     joints = actuated_joints(sim_model)
-    assert len(drops) == len(joints), (
-        f"the harness gives {len(drops)} joints a drop but the simulation model declares"
-        f" {len(joints)} actuated joints; one of the two artifacts is out of date"
+    assert len(drops) == len(joints) + RIGIDLY_MODELLED_JOINTS, (
+        f"the harness gives {len(drops)} joints a drop and the simulation model declares"
+        f" {len(joints)} actuated joints; the difference should be exactly the"
+        f" {RIGIDLY_MODELLED_JOINTS} rigidly-modelled neck joints, so one of the two"
+        " artifacts is out of date"
     )
 
 
