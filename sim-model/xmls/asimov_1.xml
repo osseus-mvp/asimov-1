@@ -93,7 +93,7 @@
     <body name="pelvis_link" pos="0 0.00000000 0.630" quat="1 0 0 0">
       <freejoint name="floating_base" />
       <site name="imu_in_pelvis" size="0.01" pos="-0.05 0 0.08"/>
-      <inertial pos="-0.0540918323179141 -3.48259522403486E-05 -0.0156255182184312" mass="3.50691251175897" fullinertia="0.00552189690363016 0.00626668820315558 0.00504655399919599 4.55841164433384E-06 -7.80273388403568E-05 1.10177467151231E-07" />
+      <inertial pos="-0.054092602736670777 6.7716776130632944E-06 -0.015605737998389059" mass="3.50451959564084" fullinertia="0.0055212508766688 0.0062597905642709 0.0050224327984679 4.55530026548363E-06 -7.79740813397181E-05 1.10102277147453E-07" />
       <geom name="pelvis_collision" class="body_capsule" fromto="-0.04 0 0.025 -0.04 0 -0.05" size="0.04"/>
       <geom name="pelvis_visual" pos="0 0 0" quat="1.0 0.0 0.0 0.0" type="mesh" mesh="pelvis.STL" class="visual" />
 
